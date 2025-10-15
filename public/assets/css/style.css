@@ -1,0 +1,155 @@
+/* DataTables processing message styling */
+div.dt-processing {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 1055 !important;
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    padding: 1rem 2rem !important;
+    border-radius: 0.5rem;
+    text-align: center !important;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    width: auto !important; /* let the size flow according to the content */
+}
+
+/* Datatables row details style */
+td.details-control svg {
+    fill: darkslategray;
+    opacity: .7;
+    transition: transform .3s linear;
+    cursor: pointer;
+}
+
+tr.shown td.details-control svg{
+    transform: rotate(180deg);
+    transition: transform .3s linear;
+}
+
+div #moreDetails {
+    display: none;
+}
+
+tbody td.no-padding {
+    padding: 0;
+}
+
+/* Loading Screen Styles */
+#loading_screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: white;
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.spinner-border {
+    width: 4rem;
+    height: 4rem;
+}
+
+/* Alert Styles */
+#alert-message-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%; 
+    display: flex;
+    justify-content: center;
+    padding: 15px;
+    z-index: 1100; 
+    box-sizing: border-box; 
+    pointer-events: none;
+}
+
+#dynamic-alert {
+    width: 60%;
+    max-width: 800px;
+    text-align: center; 
+    font-size: 1.05em; 
+    padding: 1.25rem 2rem; 
+    word-break: break-word; 
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); 
+    pointer-events: auto;
+}
+
+#message_alert ul {
+    list-style: none;
+}
+
+
+/* Navbar */
+#navbarToggleExternalContent {
+    position: fixed;
+    top: 66px;
+    left: 0;
+    right: 0;
+    z-index: 1040;
+}
+
+.navbar-nav {
+    flex-direction: column;
+    text-align: center;
+}
+
+.navbar-toggler {
+    border-color: white;
+    background-color: #012057;
+}
+
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='white' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+}
+
+.navbar-brand img {
+    max-height: 45px;
+}
+
+/* Navbar Hover */
+.highlight-on-hover:hover { 
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+}
+
+/* Custom Styling */
+.bg-portal {
+    background-color: #D5D8DA;
+}
+
+.footer img {
+    max-width: 100px;
+}
+
+.menu-section-title {
+    display: flex;
+    align-items: center;
+    height: 30px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.menu-section-title img {
+    max-height: 22px;
+    margin-right: 8px;
+}
+
+.menu-section-wrapper {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    transition: all 0.2s ease-in-out;
+    min-height: 100%;
+}
+
+.menu-section-wrapper:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 10px rgba(255,255,255,0.05);
+}

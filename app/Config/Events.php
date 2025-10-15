@@ -56,7 +56,7 @@ Events::on('pre_system', static function (): void {
 });
 
 Events::on('pre_system', function () {
-    // Permitir todas as origens, detectando dinamicamente o Origin
+    # Allow every origin by detecting the requesting IP
     $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
 
     header("Access-Control-Allow-Origin: $origin");
@@ -65,14 +65,14 @@ Events::on('pre_system', function () {
     header('Access-Control-Allow-Credentials: true');
     header('Access-Control-Max-Age: 86400');
 
-    // Se for uma requisição OPTIONS (preflight), responder e encerrar
+    # IF is an OPTIONS request (preflight), answer the request and finish conn
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(200);
         echo json_encode(['status' => 'CORS preflight OK']);
         exit;
     }
 
-    // Log simples de requisições CORS
+    # CORS Request Log
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
     $method = $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN';
     log_message('info', "[CORS-EVENT] Requisição de IP: {$ip} Método: {$method}");

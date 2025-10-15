@@ -57,14 +57,16 @@ class User extends BaseController
             ],
         ],
         'experience' => [
-            'rules' => 'permit_empty|max_length[600]',
+            'rules' => 'permit_empty|min_length[10]|max_length[600]',
             'errors' => [
+                'min_length' => 'Experience cannot be less than 10 characters.',
                 'max_length' => 'Experience must not exceed 600 characters.',
             ],
         ],
         'education' => [
-            'rules' => 'permit_empty|max_length[600]',
+            'rules' => 'permit_empty|min_length[10]|max_length[600]',
             'errors' => [
+                'min_length' => 'Education cannot be less than 10 characters.',
                 'max_length' => 'Education must not exceed 600 characters.',
             ],
         ],
@@ -104,14 +106,16 @@ class User extends BaseController
             ],
         ],
         'experience' => [
-            'rules' => 'permit_empty|max_length[600]',
+            'rules' => 'permit_empty|min_length[10]|max_length[600]',
             'errors' => [
+                'min_length' => 'Experience cannot be less than 10 characters.',
                 'max_length' => 'Experience must not exceed 600 characters.',
             ],
         ],
         'education' => [
-            'rules' => 'permit_empty|max_length[600]',
+            'rules' => 'permit_empty|min_length[10]|max_length[600]',
             'errors' => [
+                'min_length' => 'Education cannot be less than 10 characters.',
                 'max_length' => 'Education must not exceed 600 characters.',
             ],
         ],
@@ -269,14 +273,16 @@ class User extends BaseController
             $data = $this->request->getPost();
         }
 
+        log_message('info', json_encode($data, JSON_PRETTY_PRINT));
+
         $newData = [
             'name'         => esc(normalize_string($data['name'])),
             'username'     => esc(mb_strtolower(normalize_string($data['username']))),
             'password'     => esc($data['password']) ?? "",
-            'phone'        => esc(trim(format_phone_number($data['phone']))) ?? "",
-            'email'        => esc(mb_strtolower(normalize_string($data['email']))) ?? "",
-            'experience'   => esc($data['experience']) ?? "",
-            'education'    => esc($data['education']) ?? "",
+            'phone'        => isset($data['phone']) ? esc(trim(format_phone_number($data['phone']))) : "",
+            'email'        => isset($data['email']) ? esc(mb_strtolower(normalize_string($data['email']))) : "",
+            'experience'   => isset($data['experience']) ? esc($data['experience']) : "",
+            'education'    => isset($data['education']) ? esc($data['education']) : "",
             'account_role' => 'user',
         ];
 

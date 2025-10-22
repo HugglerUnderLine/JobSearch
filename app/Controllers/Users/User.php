@@ -444,9 +444,9 @@ class User extends BaseController
                 'name'       => isset($data['name']) ? esc(normalize_string($data['name'])) : "",
                 'phone'      => isset($data['phone']) ? esc(trim(format_phone_number($data['phone']))) : "",
                 'email'      => isset($data['email']) ? esc(mb_strtolower(normalize_string($data['email']))) : "",
-                'experience' => $data['experience'] ?? "",
-                'education'  => $data['education'] ?? "",
-                'password'   => !empty($data['password']) ? $data['password'] : ""
+                'experience' => isset($data['experience']) ? esc($data['experience']) : "",
+                'education'  => isset($data['education']) ? esc($data['education']) : "",
+                'password'   => isset($data['password']) ? $data['password'] : ""
             ];
 
             # Default return

@@ -5,6 +5,37 @@
 Este projeto é uma **API RESTful desenvolvida em CodeIgniter 4**, projetada para atender aos requisitos da disciplina **Tecnologia Cliente-Servidor**, ministrada na UTFPR - PG.
 O objetivo do projeto consiste no desenvolvimento de APIs RESTful, com suporte a **integração com front-ends externos, autenticação via tokens JWT**. A aplicação deve permitir a comunicação com quaisquer frameworks, linguagens ou ferramentas utilizadas por outros alunos, seguindo os conceitos de REST para envio e recuperação de dados em demais sistemas, garantindo as devidas validações de usuários e permissões. Conforme decidido através de votações, o presente sistema visa a implementação de uma plataforma de busca e oferta de empregos.
 
+## Roadmap
+### Primeira Entrega Parcial - Cliente
+- [ X ] **Enviar dados de cadastro de usuário (comum) para o servidor.**
+- [ X ] **Enviar dados de login para o servidor.**
+- [ X ] **Pedir dados de cadastro do usuário comum para o servidor.**
+- [ X ] **Enviar atualização dos dados do usuário comum para o servidor.**
+- [ X ] **Enviar pedido para apagar cadastro de usuário comum.**
+- [ X ] **Enviar dados de logout para o servidor.**
+
+### Primeira Entrega Parcial - Servidor
+- [ X ] **Processar corretamente dados recebidos de cadastro de usuário (comum).**
+- [ X ] **Processar corretamente dados de login.**
+- [ X ] **Enviar dados de cadastro do usuário comum para o cliente.**
+- [ X ] **Processar corretamente a atualização dos dados do usuário comum.**
+- [ X ] **Apagar cadastro de usuário comum.**
+- [ X ] **Processar corretamente pedido de logout.**
+
+
+### Segunda Entrega Parcial - Cliente
+- [   ] **A definir.**
+
+### Segunda Entrega Parcial - Servidor
+- [   ] **A definir.**
+
+
+### Terceira Entrega Parcial - Cliente
+- [   ] **A definir.**
+
+### Terceira Entrega Parcial - Servidor
+- [   ] **A definir.**
+
 ---
 
 ## 2. Instalação

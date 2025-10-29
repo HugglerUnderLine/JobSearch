@@ -439,6 +439,8 @@ class User extends BaseController
                 $data = $this->request->getPost();
             }
 
+            log_message('info', json_encode($data, JSON_PRETTY_PRINT));
+
             # Prepare received form data
             $newData = [
                 'name'       => isset($data['name']) ? esc(normalize_string($data['name'])) : "",

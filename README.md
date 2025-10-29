@@ -7,7 +7,7 @@ O objetivo do projeto consiste no desenvolvimento de APIs RESTful, com suporte a
 
 ## Roadmap
 ### Primeira Entrega Parcial - Cliente
-- [ X ] **Enviar dados de cadastro de usuário (comum) para o servidor.**
+- [ X ] **Enviar dados de cadastro (C) de usuário comum para o servidor.**
 - [ X ] **Enviar dados de login para o servidor.**
 - [ X ] **Pedir dados de cadastro do usuário comum para o servidor.**
 - [ X ] **Enviar atualização dos dados do usuário comum para o servidor.**
@@ -22,19 +22,55 @@ O objetivo do projeto consiste no desenvolvimento de APIs RESTful, com suporte a
 - [ X ] **Apagar cadastro de usuário comum.**
 - [ X ] **Processar corretamente pedido de logout.**
 
+---
 
 ### Segunda Entrega Parcial - Cliente
-- [   ] **A definir.**
+- [   ] **Cliente recebe e exibe corretamente mensagens de erro.**
+- [   ] **Enviar solicitação de cadastro (C) de empresa ao servidor.**
+- [   ] **Enviar solicitação de leitura (R) dos dados de cadastro da empresa ao servidor.**
+- [   ] **Enviar solicitação de atualização (U) dos dados de cadastro da empresa ao servidor.**
+- [   ] **Enviar solicitação de exclusão (D) do cadastro da empresa ao servidor.**
 
 ### Segunda Entrega Parcial - Servidor
-- [   ] **A definir.**
+- [   ] **Processar e devolver corretamente mensagens de erro.**
+- [   ] **Processar solicitação cadastro (C) de empresa.**
+- [   ] **Processar solicitação de leitura (R) dos dados de cadastro da empresa.**
+- [   ] **Processar solicitação de atualização (U) dos dados de cadastro da empresa.**
+- [   ] **Processar solicitação de exclusão (D) do cadastro da empresa.**
 
+---
 
 ### Terceira Entrega Parcial - Cliente
-- [   ] **A definir.**
+#### Empresa
+- [   ] **Enviar solicitação de cadastro (C) de vagas pela empresa ao servidor.**
+- [   ] **Enviar solicitação de leitura (R) dos dados de vaga pela empresa.**
+- [   ] **Enviar solicitação de atualização (U) dos dados de vaga pela empresa.**
+- [   ] **Enviar solicitação de exclusão (D) da vaga pela empresa.**
+- [   ] **Enviar solicitação de listagem de candidatos à vaga ofertada pela empresa.**
+- [   ] **Enviar feedback para candidatos selecionados**
+
+#### Usuário Comum
+- [   ] **Usuário busca por vagas (com filtros)**
 
 ### Terceira Entrega Parcial - Servidor
-- [   ] **A definir.**
+- [   ] **Servidor apresenta lista de usuários logados (sempre atualizada)**
+
+#### Empresa
+- [   ] **Processar cadastro (C) de vagas pela empresa.**
+- [   ] **Processar leitura (R) dos dados de vaga pela empresa.**
+- [   ] **Processar atualização (U) dos dados de vaga pela empresa.**
+- [   ] **Processar exclusão (D) da vaga pela empresa.**
+- [   ] **Processar listagem de candidatos à vaga ofertada pela empresa.**
+- [   ] **Processar envio de feedback para candidatos selecionados pela empresa.**
+
+#### Usuário Comum
+- [   ] **Usuário busca por vagas (com filtros).**
+
+### Terceira Entrega Parcial - Servidor
+- [   ] **Servidor apresenta lista de usuários logados (sempre atualizada).**
+
+### Application - Done.
+- [   ] **Web Service é Restful.**
 
 ---
 

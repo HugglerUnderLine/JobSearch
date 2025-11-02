@@ -25,18 +25,18 @@ O objetivo do projeto consiste no desenvolvimento de APIs RESTful, com suporte a
 ---
 
 ### Segunda Entrega Parcial - Cliente
-- [   ] **Cliente recebe e exibe corretamente mensagens de erro.**
-- [   ] **Enviar solicitação de cadastro (C) de empresa ao servidor.**
-- [   ] **Enviar solicitação de leitura (R) dos dados de cadastro da empresa ao servidor.**
-- [   ] **Enviar solicitação de atualização (U) dos dados de cadastro da empresa ao servidor.**
-- [   ] **Enviar solicitação de exclusão (D) do cadastro da empresa ao servidor.**
+- [ X ] **Cliente recebe e exibe corretamente mensagens de erro.**
+- [ X ] **Enviar solicitação de cadastro (C) de empresa ao servidor.**
+- [ X ] **Enviar solicitação de leitura (R) dos dados de cadastro da empresa ao servidor.**
+- [ X ] **Enviar solicitação de atualização (U) dos dados de cadastro da empresa ao servidor.**
+- [ X ] **Enviar solicitação de exclusão (D) do cadastro da empresa ao servidor.**
 
 ### Segunda Entrega Parcial - Servidor
-- [   ] **Processar e devolver corretamente mensagens de erro.**
-- [   ] **Processar solicitação cadastro (C) de empresa.**
-- [   ] **Processar solicitação de leitura (R) dos dados de cadastro da empresa.**
-- [   ] **Processar solicitação de atualização (U) dos dados de cadastro da empresa.**
-- [   ] **Processar solicitação de exclusão (D) do cadastro da empresa.**
+- [ X ] **Processar e devolver corretamente mensagens de erro.**
+- [ X ] **Processar solicitação cadastro (C) de empresa.**
+- [ X ] **Processar solicitação de leitura (R) dos dados de cadastro da empresa.**
+- [ X ] **Processar solicitação de atualização (U) dos dados de cadastro da empresa.**
+- [ X ] **Processar solicitação de exclusão (D) do cadastro da empresa.**
 
 ---
 

@@ -77,6 +77,26 @@ class CompanyModel extends Model
         }
     }
 
+    public function getCompanyDataByID($user_id) {
+        $sql_query = 'SELECT companies.user_id,
+                             users.username,
+                             users.name,
+                             users.email,
+                             users.phone,
+                             users.account_role,
+                             companies.business,
+                             companies.street,
+                             companies.number,
+                             companies.city,
+                             companies.state
+                      FROM companies
+                      INNER JOIN users ON companies.user_id = users.user_id
+                      WHERE users.user_id = :user_id:
+                      AND users.account_role = \'company\'';
+
+        return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
+    }
+
     public function insertCompany($data)
     {
         return $this->companyUpsert($data);

@@ -3,7 +3,7 @@
 <?= $this->section('content') ?>
 <div class="container py-5 my-5 d-flex justify-content-center">
     <div id="card-profile" class="card shadow-lg p-4 bg-secondary bg-opacity-10 rounded" style="width: 600px;">
-        <h4 class="mb-4 text-center">User Profile</h4>
+        <h4 id="profile-title" class="mb-4 text-center"></h4>
 
         <!-- User Profile Form -->
         <form id="profile_user_form" style="display: none;">
@@ -171,6 +171,15 @@
                 }
             });
         }
+
+        // Update title based on role
+        const titleElement = $('#profile-title');
+        if (role === 'company') {
+            titleElement.text('Company Profile');
+        } else {
+            titleElement.text('User Profile');
+        }
+
 
         loadProfile();
 

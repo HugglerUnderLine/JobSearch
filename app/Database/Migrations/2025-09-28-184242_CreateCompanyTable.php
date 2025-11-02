@@ -43,7 +43,7 @@ class CreateCompanyTable extends Migration
         ]);
 
         $this->forge->addPrimaryKey('company_id');
-        $this->forge->addForeignKey('user_id', 'users', 'user_id', 'CASCADE', 'RESTRICT');
+        $this->forge->addForeignKey('user_id', 'users', 'user_id', 'CASCADE', 'CASCADE');
         $this->forge->addKey('business');
         $this->forge->addKey('state');
 

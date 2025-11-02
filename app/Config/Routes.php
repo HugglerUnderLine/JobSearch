@@ -22,7 +22,7 @@ $routes->get('/profile', 'Users\User::index'); # Client
 
 #Read user data
 $routes->get('/users/(:num)', 'Users\User::read_user_data/$1'); # Server
-$routes->get('/company/(:num)', 'Companies\Company::read_company_data/$1'); # Server
+$routes->get('/companies/(:num)', 'Companies\Company::read_company_data/$1'); # Server
 
 #Update user data
 $routes->patch('/users/(:num)', 'Users\User::user_edit/$1'); # Server

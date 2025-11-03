@@ -76,6 +76,22 @@ class UserModel extends Model
         return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
     }
 
+    public function findUserByName($userName) {
+        $sql_query = 'SELECT users.user_id,
+                             users.username,
+                             users.name,
+                             users.password,
+                             users.email,
+                             users.phone,
+                             users.experience,
+                             users.education,
+                             users.account_role
+                      FROM users
+                      WHERE UPPER(users.name) = :user_name:';
+
+        return $this->query($sql_query, ['user_name' => $userName])->getRowArray();
+    }
+
     # Generic Method for usage of Query Builder UPDATE and INSERT
     public function userUpsert($data, $id = null) {
         try {

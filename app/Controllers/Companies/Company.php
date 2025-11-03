@@ -286,6 +286,7 @@ class Company extends BaseController
             # Remove sensitive data
             unset($companyData['password']);
             unset($companyData['user_id']);
+            unset($companyData['account_role']);
 
             foreach ($companyData as $col => $value) {
                 if (empty($value)) $value = "";
@@ -309,7 +310,6 @@ class Company extends BaseController
 
         if(!$this->request->is('POST')) {
             return $this->response->setStatusCode(500)->setJSON([
-                'textStatus'  => 'error',
                 'message' => 'Invalid request method.'
             ]);
         }
@@ -396,6 +396,16 @@ class Company extends BaseController
         }
     
         $userModel = new UserModel();
+
+        $existingUser = $userModel->getUserDataByID($userData['name']);
+
+        if (!empty($existingUser)) {
+            log_message('error', '[COMPANY REGISTRATION FORM] Company Name already exists: ' . $userData['name']);
+            return $this->response->setStatusCode(409)->setJSON([
+                'message' => 'Company Name already exists.'
+            ]);
+        }
+
         $companyModel = new CompanyModel();
 
         $newData['password'] = password_hash($newData['password'], PASSWORD_BCRYPT);
@@ -424,7 +434,6 @@ class Company extends BaseController
         }
 
         return $this->response->setStatusCode(200)->setJSON([
-            'textStatus'  => 'success',
             'message' => 'Created.'
         ]);
     }
@@ -584,6 +593,10 @@ class Company extends BaseController
                     ];
                 }
 
+                log_message('info', "==== STARTING UPDATE DEBUG: ERROR MSG ====");
+
+                log_message("info", json_encode($response, JSON_PRETTY_PRINT));
+
                 log_message('error', '[COMPANY REGISTRATION FORM] END;');
                 return $this->response->setStatusCode($statusCode)->setJSON($response);
             }
@@ -615,6 +628,7 @@ class Company extends BaseController
                 ]);
             }
 
+            $companyData['user_id'] = $user_id;
             $updated = $companyModel->updateCompany($user_id, $companyData);
 
             if (!$updated) {

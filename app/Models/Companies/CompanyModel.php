@@ -45,14 +45,14 @@ class CompanyModel extends Model
     protected $afterDelete    = [];
 
     # Generic Method for usage of Query Builder UPDATE and INSERT
-    public function companyUpsert($data, $id = null) {
+    public function companyUpsert($data, $user_id = null) {
         try {
             $this->db->transBegin();
             $builder = $this->db->table($this->table);
 
-            if (!empty($id)) {
+            if (!empty($user_id)) {
                 # Update
-                $builder->where('company_id', $id);
+                $builder->where('user_id', $user_id);
                 $result = $builder->update($data);
             } else {
                 # Insert

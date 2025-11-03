@@ -241,7 +241,7 @@
                         loadProfile();
                     } else {
                         if (status === 422 && response.details) {
-                            let errorMsg = `<strong>${response.message || "Validation Error"}</strong><ul>`;
+                            let errorMsg = `<strong>(${status}) ${response.message || "Validation Error"}</strong><ul>`;
                             response.details.forEach(item => {
                                 errorMsg += `<li>${item.field}: ${item.error}</li>`;
                             });

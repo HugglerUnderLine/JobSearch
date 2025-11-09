@@ -333,7 +333,7 @@ class Company extends BaseController
             'name'         => esc(normalize_string($data['name'])),
             'business'     => esc(normalize_string($data['business'])),
             'username'     => esc(mb_strtolower(normalize_string($data['username']))),
-            'password'     => esc($data['password']),
+            'password'     => $data['password'],
             'street'       => esc(normalize_string($data['street'])),
             'number'       => esc(trim($data['number'])),
             'city'         => esc(normalize_string($data['city'])),
@@ -366,7 +366,7 @@ class Company extends BaseController
 
         # Default return
         $response = [
-            'message' => 'One or more fields are incorrect.' // 422 default
+            'message' => 'Validation error' // 422 default
         ];
         $statusCode = 422;
 
@@ -378,12 +378,19 @@ class Company extends BaseController
         $validated = $validation->run($newData);
         if (!$validated) {
             $errors = $validation->getErrors();
+            $response['code'] = 'UNPROCESSABLE';
+            $response['details'] = array();
 
             log_message('error', '[COMPANY REGISTRATION FORM] Invalid form data given:');
             # Return errors
             foreach($errors as $key => $value) {
                 log_message('info', $key . ': ' . $value);
+                $response['details'][] = [
+                    'field' => $key,
+                    'error' => $value
+                ];
             }
+
             log_message('error', '[COMPANY REGISTRATION FORM] END;');
 
             # Specific errors
@@ -397,7 +404,7 @@ class Company extends BaseController
     
         $userModel = new UserModel();
 
-        $existingUser = $userModel->getUserDataByID($userData['name']);
+        $existingUser = $userModel->getCompanyUserByName($userData['name']);
 
         if (!empty($existingUser)) {
             log_message('error', '[COMPANY REGISTRATION FORM] Company Name already exists: ' . $userData['name']);
@@ -433,7 +440,7 @@ class Company extends BaseController
             ]);
         }
 
-        return $this->response->setStatusCode(200)->setJSON([
+        return $this->response->setStatusCode(201)->setJSON([
             'message' => 'Created.'
         ]);
     }
@@ -538,7 +545,7 @@ class Company extends BaseController
             $newData = [
                 'name'         => esc(normalize_string($data['name'])),
                 'business'     => esc(normalize_string($data['business'])),
-                'password'     => esc($data['password']),
+                'password'     => $data['password'],
                 'street'       => esc(normalize_string($data['street'])),
                 'number'       => esc(trim($data['number'])),
                 'city'         => esc(normalize_string($data['city'])),
@@ -583,7 +590,7 @@ class Company extends BaseController
                 $response['code'] = 'UNPROCESSABLE';
                 $response['details'] = array();
 
-                log_message('error', '[COMPANY REGISTRATION FORM] Invalid form data given:');
+                log_message('error', '[COMPANY UPDATE FORM] Invalid form data given:');
                 # Return errors
                 foreach($errors as $key => $value) {
                     log_message('info', $key . ': ' . $value);
@@ -597,7 +604,7 @@ class Company extends BaseController
 
                 log_message("info", json_encode($response, JSON_PRETTY_PRINT));
 
-                log_message('error', '[COMPANY REGISTRATION FORM] END;');
+                log_message('error', '[COMPANY UPDATE FORM] END;');
                 return $this->response->setStatusCode($statusCode)->setJSON($response);
             }
 
@@ -619,6 +626,17 @@ class Company extends BaseController
                 return $this->response->setStatusCode(404)->setJSON([
                     'message' => 'Company not found.'
                 ]);
+            }
+
+            if ($companyInfo['name'] !== $newData['name']) {
+                $isValidCompanyName = $userModel->getCompanyUserByName($newData['name']);
+
+                if (!empty($isValidCompanyName)) {
+                    log_message('warning', '[UPDATE COMPANY DATA] Company Name already exists: ' . $newData['name']);
+                    return $this->response->setStatusCode(409)->setJSON([
+                        'message' => 'Company name already exists'
+                    ]);
+                }
             }
 
             $updated = $userModel->updateUser($user_id, $userData);
@@ -662,6 +680,14 @@ class Company extends BaseController
             log_message('warning', '[DELETE COMPANY] Invalid request method: ' . $this->request->getMethod());
             return $this->response->setStatusCode(405)->setJSON([
                 'message' => 'Invalid request method.'
+            ]);
+        }
+
+        # Validate ID
+        if (!$user_id) {
+            log_message('warning', '[DELETE COMPANY] Empty user_id.');
+            return $this->response->setStatusCode(404)->setJSON([
+                'message' => 'Company not found.'
             ]);
         }
 
@@ -737,6 +763,14 @@ class Company extends BaseController
             }
 
             $userModel = new UserModel();
+            $userData = $userModel->getUserDataByID($user_id);
+
+            if (empty($userData)) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'message' => 'Company not found.'
+                ]);
+            }
+
             $deleted = $userModel->deleteUser($user_id);
 
             # Add the token to blacklist

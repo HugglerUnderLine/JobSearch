@@ -76,6 +76,23 @@ class UserModel extends Model
         return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
     }
 
+    public function getCompanyUserByName($company_name) {
+        $sql_query = 'SELECT users.user_id,
+                             users.username,
+                             users.name,
+                             users.password,
+                             users.email,
+                             users.phone,
+                             users.experience,
+                             users.education,
+                             users.account_role
+                      FROM users
+                      WHERE users.name = :company_name:
+                      AND users.account_role = \'company\'';
+
+        return $this->query($sql_query, ['company_name' => $company_name])->getRowArray();
+    }
+
     public function findUserByName($userName) {
         $sql_query = 'SELECT users.user_id,
                              users.username,

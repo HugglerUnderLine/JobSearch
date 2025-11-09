@@ -278,7 +278,7 @@ class User extends BaseController
         $newData = [
             'name'         => esc(normalize_string($data['name'])),
             'username'     => esc(mb_strtolower(normalize_string($data['username']))),
-            'password'     => esc($data['password']) ?? "",
+            'password'     => $data['password'] ?? "",
             'phone'        => isset($data['phone']) ? esc(trim(format_phone_number($data['phone']))) : "",
             'email'        => isset($data['email']) ? esc(mb_strtolower(normalize_string($data['email']))) : "",
             'experience'   => isset($data['experience']) ? esc($data['experience']) : "",

@@ -75,5 +75,7 @@ Events::on('pre_system', function () {
     # CORS Request Log
     $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
     $method = $_SERVER['REQUEST_METHOD'] ?? 'UNKNOWN';
+    log_message('info', "\n\n====== [CORS-EVENT] ======\n");
     log_message('info', "[CORS-EVENT] Requisição de IP: {$ip} Método: {$method}");
+    log_message('info', "\n\n====== [END CORS-EVENT] ======\n");
 });

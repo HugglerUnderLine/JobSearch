@@ -44,144 +44,144 @@ class UserModel extends Model
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
 
+
+    #|******************************|
+    #|* Auth User                  *|
+    #|******************************|
     public function authUser($username) {
-        $sql_query = 'SELECT users.user_id,
-                             users.name,
-                             users.username,
-                             users.password,
-                             users.email,
-                             users.phone,
-                             users.experience,
-                             users.education,
-                             users.account_role
-                      FROM users
-                      WHERE users.username = :username:';
-
-        return $this->query($sql_query, ['username' => $username])->getRowArray();
-    }
-
-    public function getUserDataByID($user_id) {
-        $sql_query = 'SELECT users.user_id,
-                             users.username,
-                             users.name,
-                             users.password,
-                             users.email,
-                             users.phone,
-                             users.experience,
-                             users.education,
-                             users.account_role
-                      FROM users
-                      WHERE users.user_id = :user_id:';
-
-        return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
-    }
-
-    public function getCompanyUserByName($company_name) {
-        $sql_query = 'SELECT users.user_id,
-                             users.username,
-                             users.name,
-                             users.password,
-                             users.email,
-                             users.phone,
-                             users.experience,
-                             users.education,
-                             users.account_role
-                      FROM users
-                      WHERE users.name = :company_name:
-                      AND users.account_role = \'company\'';
-
-        return $this->query($sql_query, ['company_name' => $company_name])->getRowArray();
-    }
-
-    public function findUserByName($userName) {
-        $sql_query = 'SELECT users.user_id,
-                             users.username,
-                             users.name,
-                             users.password,
-                             users.email,
-                             users.phone,
-                             users.experience,
-                             users.education,
-                             users.account_role
-                      FROM users
-                      WHERE UPPER(users.name) = :user_name:';
-
-        return $this->query($sql_query, ['user_name' => $userName])->getRowArray();
-    }
-
-    # Generic Method for usage of Query Builder UPDATE and INSERT
-    public function userUpsert($data, $id = null) {
         try {
-            $this->db->transBegin();
-            $builder = $this->db->table($this->table);
+            $sql_query = "
+                SELECT users.user_id,
+                       users.name,
+                       users.username,
+                       users.password,
+                       users.email,
+                       users.phone,
+                       users.experience,
+                       users.education,
+                       users.account_role
+                FROM users
+                WHERE users.username = :username:";
 
-            if (!empty($id)) {
-                # Update
-                $builder->where('user_id', $id);
-                $result = $builder->update($data);
+            return $this->query($sql_query, ['username' => $username])->getRowArray();
 
-                # Check for transaction errors
-                if ($this->db->transStatus() === false || !$result) {
-                    $error = $this->db->error();
-                    log_message('error', '[DB ERROR - USER UPSERT] Code: ' . $error['code'] . ' | Message: ' . $error['message']);
-                    $this->db->transRollback();
-                    return false;
-                }
+        } catch (\Throwable $e) {
+            log_message('critical', "[Auth User] Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
 
-                $this->db->transCommit();
-                return $id; // Return updated user ID
 
-            } else {
-                # Insert
-                $result = $builder->insert($data);
+    #|******************************|
+    #|* Get User Data By ID        *|
+    #|******************************|
+    public function getUserDataByID($user_id) {
+        try {
+            $sql_query = "
+                SELECT users.user_id,
+                       users.username,
+                       users.name,
+                       users.password,
+                       users.email,
+                       users.phone,
+                       users.experience,
+                       users.education,
+                       users.account_role
+                FROM users
+                WHERE users.user_id = :user_id:";
 
-                # Check for transaction errors
-                if ($this->db->transStatus() === false || !$result) {
-                    $error = $this->db->error();
-                    log_message('error', '[DB ERROR - USER UPSERT] Code: ' . $error['code'] . ' | Message: ' . $error['message']);
-                    $this->db->transRollback();
-                    return false;
-                }
+            return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
 
-                $insertedId = $this->db->insertID(); // Get the newly inserted user ID
-                $this->db->transCommit();
-                return $insertedId; // Return the ID of the inserted user
+        } catch (\Throwable $e) {
+            log_message('critical', "[Get User Data By ID] Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+
+    #|************************************|
+    #|* Is Unique Name (User or Company) *|
+    #|************************************|
+    public function isUniqueName($name, $role) {
+        try {
+            $sql_query = "
+                SELECT COUNT(*) AS total
+                FROM users
+                WHERE users.name = :name:
+                AND users.account_role = :role:";
+
+            $count = $this->query($sql_query, ['name' => $name, 'role' => $role])->getRowArray();
+
+            return empty($count['total']) ? true : false; 
+
+        } catch (\Throwable $e) {
+            log_message('critical', "[Is Unique Name] Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+
+    #|******************************|
+    #|* Insert User                *|
+    #|******************************|
+    public function insertUser($data, $db = null) {
+        try {
+            $db = $db ?? $this->db;
+            $builder = $db->table($this->table);
+            $builder->insert($data);
+
+            $insertId = $db->insertID();
+
+            if ($insertId !== null && $insertId !== '' && $insertId !== 0) {
+                return $insertId;
             }
 
         } catch (\Exception $e) {
-            log_message('critical', '[DB ERROR - USER UPSERT EXCEPTION] ' . $e->getMessage());
-            $this->db->transRollback();
-            return false;
+            log_message('critical', "[Insert User] Error: " . $e->getMessage());
+            throw $e;
         }
     }
 
-    public function insertUser($data) {
-        return $this->userUpsert($data);
-    }
 
-    public function updateUser($id, $data) {
-        return $this->userUpsert($data, $id);
-    }
-
-    public function deleteUser($id) {
+    #|******************************|
+    #|* Update User                *|
+    #|******************************|
+    public function updateUser($userID, $data, $db = null) {
         try {
-            log_message('info', "[DELETE USER] Attempting to delete user ID: {$id}");
+            if (empty($userID)) throw new Exception("Empty User ID.");
 
-            $deleted = $this->where('user_id', $id)->delete();
+            $db = $db ?? $this->db;
+            $builder = $db->table($this->table)
+                          ->where('user_id', $userID)
+                          ->update($data);
 
-            if (!$deleted) {
-                log_message('error', "[DELETE USER] Failed to delete user ID: {$id}. Delete returned false or 0 rows affected.");
-                return false;
-            }
-
-            log_message('info', "[DELETE USER] User ID {$id} successfully deleted.");
             return true;
-
-        } catch (\Throwable $e) {
-            log_message('error', "[DELETE USER] Exception while deleting user ID {$id}: " . $e->getMessage());
-            return false;
+            
+        } catch (\Exception $e) {
+            log_message('critical', "[Update User] Error: " . $e->getMessage());
+            throw $e;
         }
     }
 
 
+    #|******************************|
+    #|* Delete User                *|
+    #|******************************|
+    public function deleteUser($userID, $db = null) {
+        try {
+            if (empty($userID)) throw new Exception("Empty User ID.");
+
+            $db = $db ?? $this->db;
+
+            $builder = $db->table($this->table)
+                          ->where('user_id', $userID)
+                          ->delete();
+
+            return true;
+                
+        } catch (\Throwable $e) {
+            log_message('critical', "[Delete User] Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
 }

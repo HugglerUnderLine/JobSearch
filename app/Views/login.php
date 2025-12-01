@@ -190,9 +190,23 @@
             new bootstrap.Tooltip(this);
         });
 
+        var expected = []; // Expected returned fields from server
+        var returned = []; // Returned fields from server
 
         let serverBaseUrl = ""; // will store http://IP:PORT
 
+        // Load localStorage saved IP & Port
+        let savedServerIP = localStorage.getItem('server_ip');
+        let savedServerPort = localStorage.getItem('server_port');
+
+        if (savedServerIP && savedServerPort) {
+            $("#server_ip").val(savedServerIP);
+            $("#server_port").val(savedServerPort);
+
+            // Build serverBaseUrl
+            const ip = savedServerIP !== "127.0.0.1" ? savedServerIP : "localhost";
+            serverBaseUrl = `http://${ip}:${savedServerPort}`;
+        }
 
         // Helper: Switch cards with animation
         function switchCard(hideSelector, showSelector) {
@@ -200,7 +214,6 @@
                 $(showSelector).fadeIn(300);
             });
         }
-
 
         // Universal loading spinner for buttons
         function setLoadingButton($button, isLoading) {
@@ -217,7 +230,6 @@
                 $button.html(originalText);
             }
         }
-
 
         // Save Server IP + Port
         $('#server_form').validate({
@@ -247,18 +259,21 @@
             unhighlight: function (element) { $(element).removeClass('is-invalid'); },
             submitHandler: function (form) {
                 const ip = $('#server_ip').val().trim() != '127.0.0.1' ? $('#server_ip').val().trim() : 'localhost';
-
                 const port = $('#server_port').val().trim();
 
                 serverBaseUrl = `http://${ip}:${port}`;
+
+                // Save IP & port in localStorage
+                localStorage.setItem('server_ip', ip);
+                localStorage.setItem('server_port', port);
+
                 switchCard("#card-server", "#card-login");
                 return false;
             }
         });
 
-
         // AJAX form submit helper
-        function ajaxFormSubmit($form, endpoint, successMsg, onSuccess, isUserForm = false) {
+        function ajaxFormSubmit($form, endpoint, successMsg, onSuccess) {
             $form.on('submit', function(e) {
                 e.preventDefault();
 
@@ -279,35 +294,45 @@
                     contentType: "application/json; charset=UTF-8",
                     dataType: "json",
                     headers: { "Accept": "application/json" },
-                    complete: function(xhr) {
+                    success: function(response, textStatus, xhr) {
                         const status = xhr.status;
-                        const response = xhr.responseJSON || {};
-                        const message = response.message || xhr.statusText || "No message returned.";
+                        const message = response.message || successMsg || "Operation successful.";
 
-                        if (status === 200 || status === 201) {
-                            showMessage("success", `(${status}) ${message || successMsg}`);
-                            if (typeof onSuccess === 'function') onSuccess(response);
-                        } else {
-                            if (isUserForm && status === 422 && response.details) {
-                                let errorMsg = `<strong>${response.message || "Validation Error"}</strong><ul>`;
-                                response.details.forEach(item => {
-                                    errorMsg += `<li>${item.field}: ${item.error}</li>`;
-                                });
-                                errorMsg += "</ul>";
-                                showMessage("error", errorMsg);
-                            } else {
-                                showMessage("error", `(${status}) ${message}`);
-                            }
+                        showMessage("success", `(${status}) ${message}`);
+
+                        if (typeof onSuccess === "function") {
+                            onSuccess(response);
                         }
                     },
-                    error: function() {
+                    error: function(xhr) {
                         setLoadingButton($button, false);
-                        showMessage("error", "Connection error or invalid response.");
+
+                        const status = xhr.status;
+
+                        let response = xhr.responseJSON;
+                        if (typeof response === "string") {
+                            try { response = JSON.parse(response); }
+                            catch { response = {}; }
+                        }
+                        if (!response) response = {};
+
+                        if (status === 422 && response.details) {
+                            let errorMsg = `<strong>${response.message || "Validation Error"}</strong><ul>`;
+                            response.details.forEach(item => {
+                                errorMsg += `<li>${item.field}: ${item.error}</li>`;
+                            });
+                            errorMsg += `</ul>`;
+
+                            showMessage("error", errorMsg);
+                            return;
+                        }
+
+                        const msg = response.message || xhr.statusText || "Unknown error.";
+                        showMessage("error", `(${status}) ${msg}`);
                     }
                 });
             });
         }
-
 
         // Login
         ajaxFormSubmit(
@@ -315,36 +340,70 @@
             '/login',
             'Login successful.',
             function(response) {
+                // Expected fields:
+                expected = [
+                    {name: "token", type: "string"},
+                    {name: "sub", type: "string"},
+                    {name: "username", type: "string"},
+                    {name: "role", type: "string"},
+                    {name: "expires_in", type: "number"},
+                ];
+
+                let payload = null;
+
                 if (response && response.token) {
-                    const payload = decodeJWT(response.token);
+                    payload = decodeJWT(response.token);
 
-                    if (payload) {
-                        localStorage.clear();
-                        localStorage.setItem('server_url', serverBaseUrl);
-                        localStorage.setItem('sub', payload.sub);
-                        localStorage.setItem('token', response.token);
-                        localStorage.setItem('username', payload.username.toLowerCase());
-                        localStorage.setItem('role', payload.role.toLowerCase());
-                        localStorage.setItem('expires_in', payload.exp);
-
-                        setTimeout(() => window.location.href = "<?= base_url('about') ?>", 1000);
-                    } else {
+                    if (!payload) {
                         showMessage('error', 'Failed to decode token payload.');
+                        return;
                     }
+                    
+                } else {
+                    showMessage('error', 'No token returned by server.');
+                    return;
+                }
+
+                returned = {
+                    token: response.token,
+                    sub: payload.sub,
+                    username: payload.username,
+                    role: payload.role,
+                    expires_in: response.expires_in,
+                };
+
+                try {
+                    savedServerIP = $('#server_ip').val();
+                    savedServerPort = $('#server_port').val();
+                    serverBaseUrl = `http://${savedServerIP}:${savedServerPort}`;
+
+                    localStorage.clear();
+                    localStorage.setItem('server_ip', savedServerIP);
+                    localStorage.setItem('server_port', savedServerPort);
+                    localStorage.setItem('server_url', serverBaseUrl);
+                    localStorage.setItem('sub', returned.sub);
+                    localStorage.setItem('token', returned.token);
+                    localStorage.setItem('username', returned.username);
+                    localStorage.setItem('role', returned.role);
+                    localStorage.setItem('expires_in', returned.expires_in);
+
+                    verifyReceivedJSON(expected, returned);
+
+                    setTimeout(() => window.location.href = "<?= base_url('about') ?>", 1000);
+
+                } catch (e) {
+                    console.log("Error storing values on LS: " + e);
                 }
             }
         );
-
 
         // User Registration
         ajaxFormSubmit(
             $('#register_user_form'),
             '/users',
             'User created successfully.',
-            function() { $('#btn-back-login').trigger('click'); },
-            true
+            function() { $('#btn-back-login').trigger('click'); }
         );
-
 
         // Company Registration
         ajaxFormSubmit(
@@ -353,7 +412,6 @@
             'Company registered successfully.',
             function() { $('#btn-back-login').trigger('click'); }
         );
-
 
         // Account type selector
         $("#account_type").change(function(){
@@ -365,13 +423,11 @@
             } else { $current.fadeIn(200); }
         });
 
-
         // Go to register
         $("#btn-show-register").click(function(e){
             e.preventDefault();
             switchCard("#card-login", "#card-register");
         });
-
 
         // Back to login
         $("#btn-back-login").click(function(e){
@@ -380,7 +436,6 @@
             $("#register_user_form, #register_company_form").hide();
             $("#account_type").val("");
         });
-
         
     });
 

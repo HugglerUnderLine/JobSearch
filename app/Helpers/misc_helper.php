@@ -10,10 +10,103 @@ if (!function_exists('normalize_spaces')) {
 
 if (!function_exists('normalize_string')) {
     function normalize_string($name) {
+        if (empty($name)) return null;
+
+        $name = trim($name);
+
+        if (empty($name)) return null;
+
         $name = mb_strtoupper(remove_accents(normalize_spaces($name)));
-        return $name;
+        return esc($name);
     }
 }
+
+if (!function_exists('normalize_email')) {
+    function normalize_email($email) {
+        $email = trim($email);
+        if (empty($email)) return null;
+
+        $email = mb_strtolower(remove_accents(normalize_spaces($email)));
+        return esc($email);
+    }
+}
+
+if (!function_exists('normalize_username')) {
+    function normalize_username($name) {
+        $name = trim($name);
+        if (empty($name)) return null;
+
+        $name = strtolower(remove_accents(normalize_spaces($name)));
+        return esc($name);
+    }
+}
+
+if (!function_exists('normalize_job_area')) {
+    function normalize_job_area($area) {
+        if (!is_string($area)) return null;
+
+        // Final areas
+        $availableJobs = [
+            'Administração',
+            'Agricultura',
+            'Artes',
+            'Atendimento ao Cliente',
+            'Comercial',
+            'Comunicação',
+            'Construção Civil',
+            'Consultoria',
+            'Contabilidade',
+            'Design',
+            'Educação',
+            'Engenharia',
+            'Finanças',
+            'Jurídica',
+            'Logística',
+            'Marketing',
+            'Produção',
+            'Recursos Humanos',
+            'Saúde',
+            'Segurança',
+            'Tecnologia da Informação',
+            'Telemarketing',
+            'Vendas',
+            'Outros',
+        ];
+
+        // Input normalization
+        $clean = trim($area);
+        if ($clean === '') return null;
+
+        // Remove accents & extra spaces
+        $clean = normalize_spaces(remove_accents($clean));
+
+        // Keeps only characters, numbers and spaces
+        $clean = preg_replace('/[^a-zA-Z0-9\s]/', '', $clean);
+
+        // LOWER
+        $clean = strtolower($clean);
+
+        /**
+         * Internal mapping for comparision
+         * key → normalized value
+         */
+        $normalizedMap = [];
+
+        foreach ($availableJobs as $job) {
+            $key = strtolower(remove_accents(normalize_spaces($job)));
+            $key = preg_replace('/[^a-zA-Z0-9\s]/', '', $key); // Same input clean
+            $normalizedMap[$key] = $job;
+        }
+
+        // Verify exact match
+        if (array_key_exists($clean, $normalizedMap)) {
+            return $normalizedMap[$clean];
+        }
+
+        return null;
+    }
+}
+
 
 if (!function_exists('remove_accents')) {
     function remove_accents($str) {
@@ -35,14 +128,12 @@ if (!function_exists('remove_accents')) {
 
 if (!function_exists('format_phone_number')) {
     function format_phone_number($phone) {
-
-        if (empty($phone)) {
-            return $phone;
-        }
+        $phone = trim($phone);
+        if (empty($phone)) return null;
 
         # Verify if is already in final format
         if (preg_match('/^\(\d{2}\)\d{4,5}-\d{4}$/', $phone)) {
-            return $phone; // Returns original value
+            return esc($phone); // Returns original value
         }
 
         # Remove anything that is not a number
@@ -72,14 +163,7 @@ if (!function_exists('format_phone_number')) {
             $formatted = sprintf('(%s)%s-%s', $ddd, $prefix, $suffix);
         }
 
-        return $formatted;
-    }
-}
-
-if(!function_exists('normalize_date')) {
-    function normalize_date($data)
-    {
-        return !empty($data) ? date_format(date_create($data), "d/m/Y") : '';
+        return esc($formatted);
     }
 }
 
@@ -88,13 +172,11 @@ if (!function_exists('valid_state')) {
      * Validate and normalize a Brazilian state name or abbreviation.
      *
      * @param string $state Input string from user
-     * @return string|false Returns formatted state (e.g., "São Paulo (SP)") or false if invalid
+     * @return string|false Returns only the UF (e.g., "SP") or false if invalid
      */
-    function valid_state(string $state)
-    {
-        if (empty($state)) {
-            return false;
-        }
+    function valid_state($state) {
+        $state = trim(strval($state));
+        if (empty($state)) return null;
 
         # Mapping of all Brazilian states
         $states = [
@@ -127,47 +209,31 @@ if (!function_exists('valid_state')) {
             'TO'=>'Tocantins'
         ];
 
-        # If already in final format "Name (UF)"
-        if (preg_match('/^([A-ZÀ-ÿ\s]+)\s\(([A-Z]{2})\)$/u', $state, $matches)) {
-            $uf = $matches[2];
+        # Clean input
+        $state = trim(explode('-', $state)[0]); // remove informações extras
+        $normalized = mb_strtoupper(remove_accents($state));
+        $normalized = preg_replace('/[^A-Z]/', '', $normalized);
 
-            if (isset($states[$uf])) {
-                return $state; // Returns the original value
-            }
+        # 1. If matches a valid UF directly
+        if (isset($states[$normalized])) {
+            return esc($normalized);  // Return only the UF
         }
 
-        # Remove extra spaces, accents, special characters, and normalize case
-        # Clean everything that maybe comes after "-"
-        $state = explode('-', $state)[0]; 
-        $state = trim($state);
-
-        # Default normalization
-        $normalized = mb_strtoupper(remove_accents($state));
-        $normalized = preg_replace('/[^A-Z0-9]/', '', $normalized);
-
-        # Build an array with normalized forms for comparison
+        # Normalize full state names for comparison
         $normalizedStates = [];
         foreach ($states as $uf => $name) {
             $normName = mb_strtoupper(remove_accents($name));
-            $normName = preg_replace('/[^A-Z0-9]/', '', $normName);
+            $normName = preg_replace('/[^A-Z]/', '', $normName);
             $normalizedStates[$uf] = $normName;
         }
 
-        # Check if input matches a valid UF directly
-        if (isset($states[$normalized])) {
-            return "{$states[$normalized]} ({$normalized})";
-        }
-
-        # Check if matches any normalized name
+        # 2. If matches full state name
         foreach ($normalizedStates as $uf => $normName) {
-            if ($normName === $normalized) {
-                return "{$states[$uf]} ({$uf})";
+            if ($normalized === $normName) {
+                return esc($uf); // Return only the UF
             }
         }
 
-        return false; // invalid state
+        return null; // Invalid
     }
 }
-
-
-

@@ -8,11 +8,11 @@
         <!-- User Profile Form -->
         <form id="profile_user_form" style="display: none;">
             <div class="mb-3">
-                <label class="form-label">Username</label>
+                <label class="form-label">Username *</label>
                 <input type="text" id="user_username" name="user_username" class="form-control" disabled>
             </div>
             <div class="mb-3">
-                <label class="form-label">Full Name</label>
+                <label class="form-label">Full Name *</label>
                 <input type="text" id="name" name="name" class="form-control" disabled>
             </div>
             <div class="mb-3">
@@ -29,22 +29,22 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Professional Experience</label>
-                <textarea id="experience" name="experience" class="form-control" rows="3" disabled></textarea>
+                <textarea id="experience" name="experience" class="form-control" rows="3" placeholder="Describe your professional experience (e.g., 5 years as a software developer, worked with Python, JavaScript, and CI/CD processes)" disabled></textarea>
             </div>
             <div class="mb-3">
                 <label class="form-label">Education</label>
-                <textarea id="education" name="education" class="form-control" rows="3" disabled></textarea>
+                <textarea id="education" name="education" class="form-control" rows="3" placeholder="Describe your professional experience (e.g., 5 years as a software developer, worked with Python, JavaScript, and CI/CD processes)" disabled></textarea>
             </div>
         </form>
 
         <!-- Company Profile Form -->
         <form id="profile_company_form" style="display: none;">
             <div class="mb-3">
-                <label class="form-label">Username</label>
+                <label class="form-label">Username *</label>
                 <input type="text" id="company_username" name="company_username" class="form-control" disabled>
             </div>
             <div class="mb-3">
-                <label class="form-label">Company Name</label>
+                <label class="form-label">Company Name *</label>
                 <input type="text" id="company_name" name="company_name" class="form-control" disabled>
             </div>
             <div class="mb-3">
@@ -52,36 +52,36 @@
                 <input type="password" id="password_company" name="password" class="form-control" disabled placeholder="Leave blank to keep current">
             </div>
             <div class="mb-3">
-                <label class="form-label">Business</label>
+                <label class="form-label">Business *</label>
                 <input type="text" id="business" name="business" class="form-control" disabled>
             </div>
             <div class="row mb-3">
                 <div class="col">
-                    <label class="form-label">Street</label>
+                    <label class="form-label">Street *</label>
                     <input type="text" id="street" name="street" class="form-control" disabled>
                 </div>
                 <div class="col">
-                    <label class="form-label">Number</label>
+                    <label class="form-label">Number *</label>
                     <input type="text" id="number" name="number" class="form-control" disabled>
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col">
-                    <label class="form-label">City</label>
+                    <label class="form-label">City *</label>
                     <input type="text" id="city" name="city" class="form-control" disabled>
                 </div>
                 <div class="col">
-                    <label class="form-label">State</label>
+                    <label class="form-label">State *</label>
                     <input type="text" id="state" name="state" class="form-control" disabled>
                 </div>
             </div>
             <div class="row mb-3">
                 <div class="col">
-                    <label class="form-label">E-Mail</label>
+                    <label class="form-label">E-Mail *</label>
                     <input type="email" id="company_email" name="company_email" class="form-control" disabled>
                 </div>
                 <div class="col">
-                    <label class="form-label">Phone</label>
+                    <label class="form-label">Phone *</label>
                     <input type="text" id="company_phone" name="company_phone" class="form-control" disabled>
                 </div>
             </div>
@@ -120,6 +120,10 @@
             "Accept": "application/json", 
             "Authorization": "Bearer " + token 
         };
+
+        var expected = []; // Expected returned fields from server
+        var returned = []; // Returned fields from server
+        
         let endpoint = role === 'company' ? `/companies/${sub}` : `/users/${sub}`;
 
         function enableEdit(form) {
@@ -144,6 +148,20 @@
                 success: function(response) {
                     $('#profile_loader').hide();
                     if (role === 'company') {
+                        expected = [
+                            {name: "name", type: "string"},
+                            {name: "username", type: "string"},
+                            {name: "business", type: "string"},
+                            {name: "street", type: "string"},
+                            {name: "number", type: "string"},
+                            {name: "city", type: "string"},
+                            {name: "state", type: "string"},
+                            {name: "email", type: "string"},
+                            {name: "phone", type: "string"},
+                        ];
+
+                        verifyReceivedJSON(expected, response);
+
                         $('#profile_company_form').show();
                         $('#company_username').val(response.username);
                         $('#company_name').val(response.name);
@@ -154,7 +172,20 @@
                         $('#state').val(response.state);
                         $('#company_email').val(response.email);
                         $('#company_phone').val(response.phone);
+
                     } else {
+
+                        expected = [
+                            {name: "name", type: "string"},
+                            {name: "username", type: "string"},
+                            {name: "email", type: "string", allowEmpty: true},
+                            {name: "phone", type: "string", allowEmpty: true},
+                            {name: "experience", type: "string", allowEmpty: true},
+                            {name: "education", type: "string", allowEmpty: true},
+                        ];
+
+                        verifyReceivedJSON(expected, response);
+
                         $('#profile_user_form').show();
                         $('#user_username').val(response.username);
                         $('#name').val(response.name);
@@ -165,9 +196,12 @@
                     }
                 },
                 error: function(xhr) {
+                    const status = xhr.status;
+
                     $('#profile_loader').hide();
+
                     const msg = xhr.responseJSON?.message || "Failed to load profile.";
-                    showMessage('error', msg);
+                    showMessage('error', `(${status}) ${msg}`);
                 }
             });
         }
@@ -222,6 +256,8 @@
                 };
             }
 
+            showLoading("Updating profile...");
+
             $.ajax({
                 url: serverUrl + endpoint,
                 method: 'PATCH',
@@ -229,32 +265,44 @@
                 contentType: 'application/json',
                 data: JSON.stringify(data),
                 dataType: 'json',
-                complete: function(xhr) {
+                success: function(response, textStatus, xhr) {
                     const status = xhr.status;
-                    const response = xhr.responseJSON || {};
-                    const message = response.message || "No message returned.";
+                    const message = response.message || "Profile updated successfully.";
 
-                    if (status === 200) {
-                        showMessage("success", `(${status}) ${message || 'Profile updated successfully.'}`);
-                        if (role === 'company') disableEdit('#profile_company_form');
-                        else disableEdit('#profile_user_form');
-                        loadProfile();
-                    } else {
-                        if (status === 422 && response.details) {
-                            let errorMsg = `<strong>(${status}) ${response.message || "Validation Error"}</strong><ul>`;
-                            response.details.forEach(item => {
-                                errorMsg += `<li>${item.field}: ${item.error}</li>`;
-                            });
-                            errorMsg += "</ul>";
-                            showMessage("error", errorMsg);
-                        } else {
-                            showMessage("error", `(${status}) ${message || "Failed to save profile"}`);
-                        }
-                    }
+                    showMessage("success", `(${status}) ${message}`);
+
+                    if (role === 'company') disableEdit('#profile_company_form');
+                    else disableEdit('#profile_user_form');
+
+                    hideLoading();
+
+                    loadProfile();
                 },
                 error: function(xhr) {
-                    const msg = xhr.responseJSON?.message || "Failed to save profile.";
-                    showMessage('error', msg);
+                    const status = xhr.status;
+                    let response = xhr.responseJSON;
+                    if (typeof response === "string") {
+                        try { response = JSON.parse(response); }
+                        catch { response = {}; }
+                    }
+
+                    hideLoading();
+
+                    if (status === 422 && response.details) {
+                        let errorMsg = `<strong>(${status}) ${response.message || "Validation Error"}</strong><ul>`;
+                        response.details.forEach(item => {
+                            errorMsg += `<li>${item.field}: ${item.error}</li>`;
+                        });
+                        errorMsg += "</ul>";
+                        showMessage("error", errorMsg);
+                        return;
+                    }
+
+                    const msg = response?.message || "Failed to save profile.";
+
+                    hideLoading();
+
+                    showMessage('error', `(${status}) ${msg}`);
                 }
             });
         });

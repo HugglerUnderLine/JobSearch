@@ -3,16 +3,33 @@
 namespace App\Controllers\Companies;
 
 use App\Controllers\BaseController;
-use App\Controllers\Users\User;
 use App\Models\Companies\CompanyModel;
 use App\Models\System\BlackListModel;
 use App\Models\Users\UserModel;
+use App\Models\System\JobModel;
+use App\Models\LoggedUsersModel;
 use CodeIgniter\HTTP\ResponseInterface;
 
 class Company extends BaseController
 {
-    protected $helpers = ['misc_helper'];
+    #|*****************************|
+    #|* Helpers                   *|
+    #|*****************************|
+    protected $helpers = ['misc_helper', 'logged_users'];
 
+
+    #|*****************************|
+    #|* Session                   *|
+    #|*****************************|
+    public $session;
+    public function __construct() {
+        $this->session = session();
+    }
+
+
+    #|******************************|
+    #|* Validation Rules           *|
+    #|******************************|
     protected $companyRegistrationRules = [
         'name' => [
             'rules' => 'required|min_length[4]|max_length[150]',
@@ -179,59 +196,56 @@ class Company extends BaseController
         ],
     ];
 
-    public $session;
 
-    public function __construct() {
-        $this->session = session();
-    }
-
+    #|*****************************************|
+    #|* Index -> Return view Profile          *|
+    #|*****************************************|
     public function index() {
-        return view('system/user_profile');
+        return view('system/profile');
     }
 
-    # Read Company Data
+
+    #|*****************************|
+    #|* Read Company Data         *|
+    #|*****************************|
     public function read_company_data($user_id = null) {
-        log_message('info', '[READ COMPANY DATA] ===== Starting READ COMPANY DATA process =====');
-
-        # Validate HTTP method
-        if (!$this->request->is('get')) {
-            log_message('warning', '[READ COMPANY DATA] Invalid request method: ' . $this->request->getMethod());
-            return $this->response->setStatusCode(405)->setJSON([
-                'message' => 'Invalid request method.'
-            ]);
-        }
-
-        # Capture Authorization Header
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        log_message('info', '[READ COMPANY DATA] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
-
-        $token = null;
-
-        # Extract Bearer token
-        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            $token = $matches[1];
-            log_message('info', '[READ COMPANY DATA] Token extracted from Authorization header.');
-        }
-
-        if (empty($token)) {
-            log_message('error', '[READ COMPANY DATA] No token provided.');
-            return $this->response->setStatusCode(401)->setJSON([
-                'message' => 'Missing or invalid authorization token.'
-            ]);
-        }
-
-        // log_message('debug', '[READ COMPANY DATA] Full token before decode: ' . $token);
-
-        helper('jwt_helper');
-        $blackListModel = new BlackListModel();
-
         try {
+            log_message('info', "\n\n====== [READ COMPANY DATA] ======\n");
+
+            $db = \Config\Database::connect();
+
+            $loggedUsersModel = new LoggedUsersModel();
+
+            # Capture Authorization Header
+            $authHeader = $this->request->getHeaderLine('Authorization');
+            log_message('info', '[READ COMPANY DATA] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
+
+            $token = null;
+
+            # Extract Bearer token
+            if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                $token = $matches[1];
+                log_message('info', '[READ COMPANY DATA] Token extracted from Authorization header.');
+            }
+
+            if (empty($token)) {
+                log_message('error', '[READ COMPANY DATA] No token provided.');
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                remove_logged_user(123);
+
+                return $this->setResponse(401, "Missing or invalid authorization token.");
+            }
+
+            helper('jwt_helper');
+            $blackListModel = new BlackListModel();
+
             # Validate basic JWT format
             if (!preg_match('/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/', $token)) {
-                log_message('error', '[READ COMPANY DATA] Invalid JWT format.');
-                return $this->response->setStatusCode(400)->setJSON([
-                    'message' => 'Malformed JWT token.'
-                ]);
+                log_message('error', '[READ COMPANY DATA] Malformed JWT Token.');
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(400, "Malformed JWT Token.");
             }
 
             # Decode token
@@ -240,26 +254,26 @@ class Company extends BaseController
 
             if (empty($decoded) || !isset($decoded['sub'])) {
                 log_message('warning', '[READ COMPANY DATA] Invalid token structure.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid or missing token payload.'
-                ]);
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(401, "Invalid or missing Token Payload.");
             }
 
             # Check blacklist
-            $isValid = $blackListModel->verify_token($token);
-            if (!$isValid) {
+            $isValidToken = $blackListModel->verify_token($token);
+            if (!$isValidToken) {
                 log_message('warning', '[READ COMPANY DATA] Token is blacklisted or invalid.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid token.'
-                ]);
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(401, "Invalid Token.");
             }
 
             # Validate role: must be 'company'
             if (strtolower($decoded['role'] ?? '') != 'company') {
                 log_message('warning', '[READ COMPANY DATA] Access denied. Role is not "company".');
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
             # Retrieve user data
@@ -268,9 +282,9 @@ class Company extends BaseController
             # Validate role: must be 'company'
             if ($sub != $user_id) {
                 log_message('warning', "[READ COMPANY DATA] Access denied. User JWT Sub doesn't match URL user_id.");
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
             $companyModel = new CompanyModel();
@@ -278,216 +292,231 @@ class Company extends BaseController
 
             if (empty($companyData)) {
                 log_message('warning', '[READ COMPANY DATA] No company found associated with USER ID: ' . $user_id);
-                return $this->response->setStatusCode(404)->setJSON([
-                    'message' => 'Company not found.'
-                ]);
+                log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+                return $this->setResponse(404, "Company not found.");
             }
 
             # Remove sensitive data
-            unset($companyData['password']);
-            unset($companyData['user_id']);
-            unset($companyData['account_role']);
+            unset($companyData['password'], $companyData['user_id'], $companyData['account_role'], $companyData['company_id']);
 
-            foreach ($companyData as $col => $value) {
+            foreach ($companyData as $col => &$value) {
                 if (empty($value)) $value = "";
-            }
+            } unset($value);
 
             log_message('info', '[READ COMPANY DATA] Company data successfully retrieved.');
-            // log_message('debug', '[READ COMPANY DATA] Company Data: ' . json_encode($companyData));
+            log_message('info', "[READ COMPANY DATA] Returned JSON Body: " . json_encode($companyData, JSON_PRETTY_PRINT));
+            log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
 
-            return $this->response->setStatusCode(200)->setJSON($companyData);
+            return $this->response->setStatusCode(200)->setContentType("application/json")->setJSON($companyData);
 
         } catch (\Throwable $e) {
-            log_message('error', '[READ COMPANY DATA ERROR] ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Internal Server Error.'
-            ]);
+            log_message('error', '[READ COMPANY DATA] Error: ' . $e->getMessage());
+            log_message('info', "\n\n====== [END READ COMPANY DATA] ======\n");
+
+            return $this->setResponse(500, "Internal Server Error.");
         }
     }
 
-    # Company Insertion / Registration
+
+    #|*********************************|
+    #|* Company Insert / Registration *|
+    #|*********************************|
     public function company_registration() {
+        try {
+            log_message('info', "\n\n====== [COMPANY REGISTRATION] ======\n");
 
-        if(!$this->request->is('POST')) {
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Invalid request method.'
-            ]);
-        }
-    
-        $json = $this->request->getBody();
-        if (!empty($json)) {
-            try {
-                $data = $this->request->getJSON(true);
-            } catch (\Exception $e) {
-                $data = [];
-            }
-        }
+            # DB Init for transaction control
+            $db = \Config\Database::connect();
 
-        if (empty($data)) {
-            $data = $this->request->getPost();
-        }
+            # Try to get JSON
+            $data = $this->request->getJSON(true);
 
-        log_message('info', json_encode($data, JSON_PRETTY_PRINT));
-
-        $newData = [
-            'name'         => esc(normalize_string($data['name'])),
-            'business'     => esc(normalize_string($data['business'])),
-            'username'     => esc(mb_strtolower(normalize_string($data['username']))),
-            'password'     => $data['password'],
-            'street'       => esc(normalize_string($data['street'])),
-            'number'       => esc(trim($data['number'])),
-            'city'         => esc(normalize_string($data['city'])),
-            'state'        => esc(trim($data['state'])),
-            'phone'        => esc(trim(format_phone_number($data['phone']))),
-            'email'        => esc(mb_strtolower(normalize_string($data['email']))),
-            'account_role' => 'company'
-        ];
-
-        $userData = [
-            'name'         => $newData['name'],
-            'username'     => $newData['username'],
-            'password'     => password_hash($newData['password'], PASSWORD_BCRYPT),
-            'phone'        => $newData['phone'],
-            'email'        => $newData['email'],
-            'experience'   => "",
-            'education'    => "",
-            'account_role' => 'company',
-        ];
-
-        $companyData = [
-            'business'     => $newData['business'],
-            'street'       => $newData['street'],
-            'number'       => $newData['number'],
-            'city'         => $newData['city'],
-            'state'        => valid_state($newData['state']),
-        ];
-
-        // log_message('info', json_encode($newData, JSON_PRETTY_PRINT));
-
-        # Default return
-        $response = [
-            'message' => 'Validation error' // 422 default
-        ];
-        $statusCode = 422;
-
-        # CI Validation
-        $errors = [];
-        $validation = \Config\Services::validation();
-        $validation->reset();
-        $validation->setRules($this->companyRegistrationRules);
-        $validated = $validation->run($newData);
-        if (!$validated) {
-            $errors = $validation->getErrors();
-            $response['code'] = 'UNPROCESSABLE';
-            $response['details'] = array();
-
-            log_message('error', '[COMPANY REGISTRATION FORM] Invalid form data given:');
-            # Return errors
-            foreach($errors as $key => $value) {
-                log_message('info', $key . ': ' . $value);
-                $response['details'][] = [
-                    'field' => $key,
-                    'error' => $value
-                ];
+            # If it came empty, try body as array
+            if (empty($data)) {
+                $raw = $this->request->getBody();
+                $data = json_decode($raw, true) ?? [];
             }
 
-            log_message('error', '[COMPANY REGISTRATION FORM] END;');
+            log_message('info', "[COMPANY REGISTRATION] Received Data: " . json_encode($data, JSON_PRETTY_PRINT));
 
-            # Specific errors
-            if (isset($errors['username']) && stripos($errors['username'], 'already taken') !== false) {
-                $response['message'] = 'Username already exists.';
-                $statusCode = 409;
+            $expectedFields = [
+                'name',
+                'business',
+                'username',
+                'password',
+                'street',
+                'number',
+                'city',
+                'state',
+                'phone',
+                'email',
+            ];
+
+            # Loop through expected fields to identify unexisting indexes.
+            foreach ($expectedFields as $field) {
+                if (!array_key_exists($field, $data)) {
+                    $data[$field] = null; // Create Index with null value;
+                }
             }
 
-            return $this->response->setStatusCode($statusCode)->setJSON($response);
+            $newData = [
+                'name'         => normalize_string($data['name']),
+                'business'     => normalize_string($data['business']),
+                'username'     => normalize_username($data['username']),
+                'password'     => $data['password'] ?? null,
+                'street'       => normalize_string($data['street']),
+                'number'       => esc(trim($data['number'])),
+                'city'         => normalize_string($data['city']),
+                'state'        => valid_state($data['state']),
+                'phone'        => format_phone_number($data['phone']),
+                'email'        => normalize_email($data['email']),
+                'account_role' => 'company'
+            ];
+
+            $userData = [
+                'name'         => $newData['name'],
+                'username'     => $newData['username'],
+                'password'     => password_hash($newData['password'], PASSWORD_BCRYPT),
+                'phone'        => $newData['phone'],
+                'email'        => $newData['email'],
+                'experience'   => null,
+                'education'    => null,
+                'account_role' => 'company',
+            ];
+
+            $companyData = [
+                'business'     => $newData['business'],
+                'street'       => $newData['street'],
+                'number'       => $newData['number'],
+                'city'         => $newData['city'],
+                'state'        => $newData['state'],
+            ];
+
+            // log_message('info', json_encode($newData, JSON_PRETTY_PRINT));
+
+            # Default return
+            $response = [
+                'message' => 'Validation error.' // 422 default
+            ];
+            $statusCode = 422;
+
+            # CI Validation
+            $errors = [];
+            $validation = \Config\Services::validation();
+            $validation->reset();
+            $validation->setRules($this->companyRegistrationRules);
+            $validated = $validation->run($newData);
+            if (!$validated) {
+                $errors = $validation->getErrors();
+                $response['code'] = 'UNPROCESSABLE';
+                $response['details'] = array();
+
+                # Return errors
+                foreach($errors as $key => $value) {
+                    $response['details'][] = [
+                        'field' => $key,
+                        'error' => $value
+                    ];
+                }
+
+                # Specific errors
+                if (isset($errors['username']) && stripos($errors['username'], 'already taken') !== false) {
+                    $response['message'] = 'Username already exists.';
+                    $statusCode = 409;
+                }
+
+                log_message('error', '[COMPANY REGISTRATION FORM] Invalid form data given: ' . json_encode($response, JSON_PRETTY_PRINT));
+                log_message('info', "\n\n====== [END COMPANY REGISTRATION] ======\n");
+
+                return $this->response->setStatusCode($statusCode)->setContentType('application/json')->setJSON($response);
+            }
+        
+            $userModel = new UserModel();
+            $isUniqueCompanyName = $userModel->isUniqueName($userData['name'], "company");
+
+            if (!$isUniqueCompanyName) {
+                log_message('error', '[COMPANY REGISTRATION] Company Name already exists: ' . $userData['name']);
+                log_message('info', "\n\n====== [END COMPANY REGISTRATION] ======\n");
+                return $this->setResponse(409, "Company Name already exists.");
+            }
+
+            $companyModel = new CompanyModel();
+
+            $newData['password'] = password_hash($newData['password'], PASSWORD_BCRYPT);
+
+            $userModel = new UserModel();
+
+            $db->transBegin();
+            $user_id = $userModel->insertUser($userData, $db);
+
+            unset($newData);
+
+            $companyData['user_id'] = $user_id;
+
+            $companyModel->insertCompany($companyData, $db);
+
+            # Commit Transaction
+            $db->transCommit();
+
+            log_message('info', "[COMPANY REGISTRATION] Account #$user_id created successfully.");
+            log_message('info', "\n\n====== [END COMPANY REGISTRATION] ======\n");
+
+            return $this->setResponse(201, "Created.");
+
+        } catch(\Throwable $e) {
+            log_message('error', '[COMPANY REGISTRATION] Error: ' . $e->getMessage());
+            log_message('info', "\n\n====== [END COMPANY REGISTRATION] ======\n");
+
+            if (!isset($db)) $db = \Config\Database::connect();
+
+            if ($db->transStatus() === true) $db->transRollback();
+
+            return $this->setResponse(500, "Internal Server Error.");
         }
-    
-        $userModel = new UserModel();
-
-        $existingUser = $userModel->getCompanyUserByName($userData['name']);
-
-        if (!empty($existingUser)) {
-            log_message('error', '[COMPANY REGISTRATION FORM] Company Name already exists: ' . $userData['name']);
-            return $this->response->setStatusCode(409)->setJSON([
-                'message' => 'Company Name already exists.'
-            ]);
-        }
-
-        $companyModel = new CompanyModel();
-
-        $newData['password'] = password_hash($newData['password'], PASSWORD_BCRYPT);
-
-        $userModel = new UserModel();
-
-        $userID = $userModel->insertUser($userData);
-        if (!$userID) {
-            log_message('error', '[COMPANY REGISTRATION FORM] Failed to insert user data.');
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Server Internal Error.'
-            ]);
-        }
-
-        unset($newData);
-
-        $companyData['user_id'] = $userID;
-
-        $res = $companyModel->insertCompany($companyData);
-
-        if (!$res) {
-            log_message('error', '[COMPANY REGISTRATION FORM] Failed to insert company data.');
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Server Internal Error.'
-            ]);
-        }
-
-        return $this->response->setStatusCode(201)->setJSON([
-            'message' => 'Created.'
-        ]);
     }
 
-    # Company Update / Edit
+    
+    #|*****************************|
+    #|* Company Update / Edit     *|
+    #|*****************************|
     public function company_edit($user_id = null) {
-        log_message('info', '[UPDATE COMPANY DATA] ===== Starting UPDATE COMPANY DATA process =====');
-
-        # Validate HTTP method
-        if (!$this->request->is('patch')) {
-            log_message('warning', '[UPDATE COMPANY DATA] Invalid request method: ' . $this->request->getMethod());
-            return $this->response->setStatusCode(405)->setJSON([
-                'message' => 'Invalid request method.'
-            ]);
-        }
-
-        # Capture Authorization Header
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        log_message('info', '[UPDATE COMPANY DATA] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
-
-        $token = null;
-
-        # Extract Bearer token
-        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            $token = $matches[1];
-            log_message('info', '[UPDATE COMPANY DATA] Token extracted from Authorization header.');
-        }
-
-        if (empty($token)) {
-            log_message('error', '[UPDATE COMPANY DATA] No token provided.');
-            return $this->response->setStatusCode(401)->setJSON([
-                'message' => 'Missing or invalid authorization token.'
-            ]);
-        }
-
-        log_message('debug', '[UPDATE COMPANY DATA] Full token before decode: ' . $token);
-
-        helper('jwt_helper');
-        $blackListModel = new BlackListModel();
-
         try {
+            log_message('info', "\n\n====== [UPDATE COMPANY DATA] ======\n");
+
+            # DB Connection
+            $db = \Config\Database::connect();
+
+            # Capture Authorization Header
+            $authHeader = $this->request->getHeaderLine('Authorization');
+            log_message('info', '[UPDATE COMPANY DATA] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
+
+            $token = null;
+
+            # Extract Bearer token
+            if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                $token = $matches[1];
+                log_message('info', '[UPDATE COMPANY DATA] Token extracted from Authorization header.');
+            }
+
+            if (empty($token)) {
+                log_message('error', '[UPDATE COMPANY DATA] No token provided.');
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(401, "Missing or invalid Authorization Token.");
+            }
+
+            log_message('debug', '[UPDATE COMPANY DATA] Full token before decode: ' . $token);
+
+            helper('jwt_helper');
+            $blackListModel = new BlackListModel();
+
             # Validate basic JWT format
             if (!preg_match('/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/', $token)) {
                 log_message('error', '[UPDATE COMPANY DATA] Invalid JWT format.');
-                return $this->response->setStatusCode(400)->setJSON([
-                    'message' => 'Malformed JWT token.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(400, "Malformed JWT Token.");
             }
 
             # Decode token
@@ -496,26 +525,26 @@ class Company extends BaseController
 
             if (empty($decoded) || !isset($decoded['sub'])) {
                 log_message('warning', '[UPDATE COMPANY DATA] Invalid token structure.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid or missing token payload.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(401, "Invalid or missing Token Payload.");
             }
 
             # Check blacklist
-            $isValid = $blackListModel->verify_token($token);
-            if (!$isValid) {
+            $isValidToken = $blackListModel->verify_token($token);
+            if (!$isValidToken) {
                 log_message('warning', '[UPDATE COMPANY DATA] Token is blacklisted or invalid.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid token.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(401, "Invalid Token.");
             }
 
             # Validate role: must be 'company'
             if (strtolower($decoded['role'] ?? '') != 'company') {
                 log_message('warning', '[UPDATE COMPANY DATA] Access denied. Role is not "company".');
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
             # Retrieve user data
@@ -523,24 +552,21 @@ class Company extends BaseController
 
             if ($user_id != $sub) {
                 log_message('warning', "[UPDATE COMPANY DATA] Access denied. User JWT Sub doesn't match URL user_id.");
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
-            $json = $this->request->getBody();
-            if (!empty($json)) {
-                try {
-                    $data = $this->request->getJSON(true);
-                } catch (\Exception $e) {
-                    $data = [];
-                }
-            }
+            # Try to get JSON
+            $data = $this->request->getJSON(true);
+
+            # If it came empty, try body as array
             if (empty($data)) {
-                $data = $this->request->getPost();
+                $raw = $this->request->getBody();
+                $data = json_decode($raw, true) ?? [];
             }
 
-            log_message('info', json_encode($data, JSON_PRETTY_PRINT));
+            log_message('info', "[UPDATE COMPANY DATA] Received Data: " . json_encode($data, JSON_PRETTY_PRINT));
 
             $newData = [
                 'name'         => esc(normalize_string($data['name'])),
@@ -549,8 +575,8 @@ class Company extends BaseController
                 'street'       => esc(normalize_string($data['street'])),
                 'number'       => esc(trim($data['number'])),
                 'city'         => esc(normalize_string($data['city'])),
-                'state'        => esc(normalize_string(trim($data['state']))),
-                'phone'        => esc(trim(format_phone_number($data['phone']))),
+                'state'        => esc(normalize_string($data['state'])),
+                'phone'        => esc(format_phone_number($data['phone'])),
                 'email'        => esc(mb_strtolower(normalize_string($data['email']))),
                 'account_role' => 'company'
             ];
@@ -560,8 +586,8 @@ class Company extends BaseController
                 'password'     => $newData['password'],
                 'phone'        => $newData['phone'],
                 'email'        => $newData['email'],
-                'experience'   => "",
-                'education'    => "",
+                'experience'   => null,
+                'education'    => null,
                 'account_role' => 'company',
             ];
 
@@ -570,12 +596,12 @@ class Company extends BaseController
                 'street'       => $newData['street'],
                 'number'       => $newData['number'],
                 'city'         => $newData['city'],
-                'state'        => esc(valid_state($newData['state'])),
+                'state'        => valid_state($newData['state']),
             ];
 
             # Default return
             $response = [
-                'message'    => 'Validation error'
+                'message'    => 'Validation error.'
             ];
             $statusCode = 422;
 
@@ -590,22 +616,18 @@ class Company extends BaseController
                 $response['code'] = 'UNPROCESSABLE';
                 $response['details'] = array();
 
-                log_message('error', '[COMPANY UPDATE FORM] Invalid form data given:');
                 # Return errors
                 foreach($errors as $key => $value) {
-                    log_message('info', $key . ': ' . $value);
                     $response['details'][] = [
                         'field' => $key,
                         'error' => $value
                     ];
                 }
 
-                log_message('info', "==== STARTING UPDATE DEBUG: ERROR MSG ====");
+                log_message('error', '[UPDATE COMPANY DATA] Invalid form data given: ' . json_encode($response, JSON_PRETTY_PRINT));
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
 
-                log_message("info", json_encode($response, JSON_PRETTY_PRINT));
-
-                log_message('error', '[COMPANY UPDATE FORM] END;');
-                return $this->response->setStatusCode($statusCode)->setJSON($response);
+                return $this->response->setStatusCode($statusCode)->setContentType('application/json')->setJSON($response);
             }
 
             # Deal with password sepparetely (if empty ? keeps current : change to new)
@@ -623,183 +645,197 @@ class Company extends BaseController
 
             if (empty($companyInfo)) {
                 log_message('warning', '[UPDATE COMPANY DATA] Company not found. USER ID: ' . $user_id);
-                return $this->response->setStatusCode(404)->setJSON([
-                    'message' => 'Company not found.'
-                ]);
+                log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                return $this->setResponse(403, "Company not found.");
             }
 
             if ($companyInfo['name'] !== $newData['name']) {
-                $isValidCompanyName = $userModel->getCompanyUserByName($newData['name']);
+                $isUniqueCompanyName = $userModel->isUniqueName($newData['name'], "company");
 
-                if (!empty($isValidCompanyName)) {
+                if (!$isUniqueCompanyName) {
                     log_message('warning', '[UPDATE COMPANY DATA] Company Name already exists: ' . $newData['name']);
-                    return $this->response->setStatusCode(409)->setJSON([
-                        'message' => 'Company name already exists'
-                    ]);
+                    log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+                    return $this->setResponse(409, "Company name already exists.");
                 }
             }
 
-            $updated = $userModel->updateUser($user_id, $userData);
-            if (!$updated) {
-                return $this->response->setStatusCode(500)->setJSON([
-                    'message' => 'Failed to update company data.'
-                ]);
-            }
+            # Start Transaction
+            $db->transBegin();
+            $userModel->updateUser($user_id, $userData, $db);
 
             $companyData['user_id'] = $user_id;
-            $updated = $companyModel->updateCompany($user_id, $companyData);
+            $companyData['company_id'] = $companyInfo['company_id'];
+            $companyModel->updateCompany($user_id, $companyData, $db);
 
-            if (!$updated) {
-                return $this->response->setStatusCode(500)->setJSON([
-                    'message' => 'Failed to update company data.'
-                ]);
-            }
+            # Commit Transaction
+            $db->transCommit();
 
-            return $this->response->setStatusCode(200)->setJSON([
-                'message' => 'Profile updated successfully.'
-            ]);
+            log_message('info', "[UPDATE COMPANY DATA] Account #$user_id updated successfully. ");
+            log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
 
-        } catch (\Throwable $e) {
-            log_message('error', '[UPDATE COMPANY DATA ERROR] ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Internal Server Error.'
-            ]);
+            return $this->setResponse(200, "Profile updated successfully.");
+
+        } catch(\Throwable $e) {
+            log_message('error', '[UPDATE COMPANY DATA] Error: ' . $e->getMessage());
+            log_message('info', "\n\n====== [END UPDATE COMPANY DATA] ======\n");
+
+            if (!isset($db)) $db = \Config\Database::connect();
+            if ($db->transStatus() === true) $db->transRollback();
+
+            return $this->setResponse(500, "Internal Server Error.");
         }
     }
 
 
-    # Company DELETE
-    /*
-     * Remember to come back to this point later. The company cannot be deleted if there is any active job listing associated with it.
-     */
+    #|*****************************|
+    #|* Company Delete            *|
+    #|*****************************|
     public function company_delete($user_id = null) {
-        log_message('info', '[DELETE COMPANY] ===== Starting DELETE COMPANY process =====');
-
-        # Validate HTTP method
-        if (!$this->request->is('delete')) {
-            log_message('warning', '[DELETE COMPANY] Invalid request method: ' . $this->request->getMethod());
-            return $this->response->setStatusCode(405)->setJSON([
-                'message' => 'Invalid request method.'
-            ]);
-        }
-
-        # Validate ID
-        if (!$user_id) {
-            log_message('warning', '[DELETE COMPANY] Empty user_id.');
-            return $this->response->setStatusCode(404)->setJSON([
-                'message' => 'Company not found.'
-            ]);
-        }
-
-        # Capture Authorization Header
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        log_message('info', '[DELETE COMPANY] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
-
-        $token = null;
-
-        # Extract Bearer token
-        if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
-            $token = $matches[1];
-            log_message('info', '[DELETE COMPANY] Token extracted from Authorization header.');
-        }
-
-        if (empty($token)) {
-            log_message('error', '[DELETE COMPANY] No token provided.');
-            return $this->response->setStatusCode(401)->setJSON([
-                'message' => 'Missing or invalid authorization token.'
-            ]);
-        }
-
-        log_message('debug', '[DELETE COMPANY] Full token before decode: ' . $token);
-
-        helper('jwt_helper');
-        $blackListModel = new BlackListModel();
-
         try {
+            log_message('info', "\n\n====== [COMPANY DELETE] ======\n");
+
+            $db = \Config\Database::connect();
+
+            # Validate ID
+            if (empty($user_id)) {
+                log_message('warning', '[COMPANY DELETE] Empty user_id.');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(403, "Company not found.");
+            }
+
+            # Capture Authorization Header
+            $authHeader = $this->request->getHeaderLine('Authorization');
+            log_message('info', '[COMPANY DELETE] Received Authorization Header: ' . ($authHeader ?: 'NONE'));
+
+            $token = null;
+
+            # Extract Bearer token
+            if (!empty($authHeader) && preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
+                $token = $matches[1];
+                log_message('info', '[COMPANY DELETE] Token extracted from Authorization header.');
+            }
+
+            if (empty($token)) {
+                log_message('error', '[COMPANY DELETE] No token provided.');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(401, "Missing or invalid Authorization Token.");
+            }
+
+            log_message('debug', '[COMPANY DELETE] Full token before decode: ' . $token);
+
+            helper('jwt_helper');
+            $blackListModel = new BlackListModel();
+
             # Validate basic JWT format
             if (!preg_match('/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/', $token)) {
-                log_message('error', '[DELETE COMPANY] Invalid JWT format.');
-                return $this->response->setStatusCode(400)->setJSON([
-                    'message' => 'Malformed JWT token.'
-                ]);
+                log_message('error', '[COMPANY DELETE] Invalid JWT format.');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(400, "Malformed JWT Token.");
             }
 
             # Decode token
             $decoded = jwt_decode($token);
-            log_message('info', '[DELETE COMPANY] Decoded token: ' . json_encode($decoded));
+            log_message('info', '[COMPANY DELETE] Decoded token: ' . json_encode($decoded));
 
             if (empty($decoded) || !isset($decoded['sub'])) {
-                log_message('warning', '[DELETE COMPANY] Invalid token structure.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid or missing token payload.'
-                ]);
+                log_message('warning', '[COMPANY DELETE] Invalid token structure.');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(401, "Invalid or missing Token Payload.");
             }
 
             # Check blacklist
             $isValid = $blackListModel->verify_token($token);
             if (!$isValid) {
-                log_message('warning', '[DELETE COMPANY] Token is blacklisted or invalid.');
-                return $this->response->setStatusCode(401)->setJSON([
-                    'message' => 'Invalid token.'
-                ]);
+                log_message('warning', '[COMPANY DELETE] Token is blacklisted or invalid.');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(401, "Invalid Token.");
             }
 
             # Validate role: must be 'company'
             if (strtolower($decoded['role'] ?? '') != 'company') {
-                log_message('warning', '[DELETE COMPANY] Access denied. Role is not "company".');
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('warning', '[COMPANY DELETE] Access denied. Role is not "company".');
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
             # Retrieve user data
             $sub = $decoded['sub'];
 
             if ($user_id != $sub) {
-                log_message('warning', "[DELETE COMPANY] Access denied. User JWT Sub doesn't match URL user_id.");
-                return $this->response->setStatusCode(403)->setJSON([
-                    'message' => 'Forbidden.'
-                ]);
+                log_message('warning', "[COMPANY DELETE] Access denied. User JWT Sub doesn't match URL user_id.");
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+                return $this->setResponse(403, "Forbidden.");
             }
 
             $userModel = new UserModel();
             $userData = $userModel->getUserDataByID($user_id);
 
             if (empty($userData)) {
-                return $this->response->setStatusCode(404)->setJSON([
-                    'message' => 'Company not found.'
-                ]);
+                log_message('info', "[COMPANY DELETE] No user found with provided ID.");
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+                return $this->setResponse(403, "Company not found.");
             }
 
-            $deleted = $userModel->deleteUser($user_id);
+            $companyModel = new CompanyModel();
+            $companyData = $companyModel->getCompanyDataByID($user_id);
 
+            $jobModel = new JobModel();
+            $hasActiveJobs = $jobModel->checkExistingJobs($companyData['company_id']);
+
+            if ($hasActiveJobs) {
+                log_message('info', "[COMPANY DELETE] Company #$user_id still have active jobs. Delete aborted.");
+                log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+                return $this->setResponse(409, "Unable to delete account with active jobs.");
+            }
+
+            $db->transBegin();
+
+            $userModel->deleteUser($user_id, $db);
             # Add the token to blacklist
-            $inserted = $blackListModel->add_token($token);
-            if (!$inserted) {
-                log_message('error', '[LOGOUT] Failed to insert token into blacklist.');
-                return $this->response->setStatusCode(500)->setJSON([
-                    'message' => 'Internal Server Error.'
-                ]);
-            }
+            $blackListModel->add_token($token);
 
-            if (!$deleted) {
-                return $this->response->setStatusCode(500)->setJSON([
-                    'message' => 'Internal Server Error.'
-                ]);
-            }
+            $db->transCommit();
 
-            return $this->response->setStatusCode(200)->setJSON([
-                'message' => 'Company deleted successfully.'
-            ]);
+            $loggedUsersModel = new LoggedUsersModel();
+            $loggedUsersModel
+                ->where('jwt_token', $token)
+                ->delete();
 
-        } catch (\Throwable $e) {
-            log_message('error', '[DELETE COMPANY ERROR] ' . $e->getMessage());
-            return $this->response->setStatusCode(500)->setJSON([
-                'message' => 'Internal Server Error.'
-            ]);
+            log_message('info', "[COMPANY DELETE] Account #$user_id deleted successfully.");
+            log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+            return $this->setResponse(200, "Company deleted successfully.");
+
+        } catch(\Throwable $e) {
+            log_message('error', '[COMPANY DELETE] Error: ' . $e->getMessage());
+            log_message('info', "\n\n====== [END COMPANY DELETE] ======\n");
+
+            if (!isset($db)) $db = \Config\Database::connect();
+            if ($db->transStatus() === true) $db->transRollback();
+
+            return $this->setResponse(500, "Internal Server Error.");
         }
     }
-    
+
+
+    #|*****************************|
+    #|* JSON Response Builder     *|
+    #|*****************************|
+    private function setResponse($code, $message) {
+        return $this->response->setStatusCode($code)
+                              ->setContentType('application/json')
+                              ->setJSON([
+                                    'message' => $message
+                                ]);
+    }
 }
     
     

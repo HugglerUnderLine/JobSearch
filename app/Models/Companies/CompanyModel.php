@@ -44,67 +44,78 @@ class CompanyModel extends Model
     protected $beforeDelete   = [];
     protected $afterDelete    = [];
 
-    # Generic Method for usage of Query Builder UPDATE and INSERT
-    public function companyUpsert($data, $user_id = null) {
+
+    #|******************************|
+    #|* Get Company Data By ID     *|
+    #|******************************|
+    public function getCompanyDataByID($user_id) {
         try {
-            $this->db->transBegin();
-            $builder = $this->db->table($this->table);
+            $sql_query = "
+                SELECT companies.company_id,
+                       companies.user_id,
+                       users.username,
+                       users.name,
+                       users.email,
+                       users.phone,
+                       users.account_role,
+                       companies.business,
+                       companies.street,
+                       companies.number,
+                       companies.city,
+                       companies.state
+                FROM companies
+                INNER JOIN users ON companies.user_id = users.user_id
+                WHERE companies.user_id = :user_id:
+                AND users.account_role = 'company'";
 
-            if (!empty($user_id)) {
-                # Update
-                $builder->where('user_id', $user_id);
-                $result = $builder->update($data);
-            } else {
-                # Insert
-                $result = $builder->insert($data);
-            }
-
-            # Verify transaction status and query result
-            if ($this->db->transStatus() === false || !$result) {
-                $error = $this->db->error();
-                log_message('error', '[DB ERROR - COMPANY UPSERT] Code: ' . $error['code'] . ' | Message: ' . $error['message']);
-                $this->db->transRollback();
-                return false;
-            }
-
-            $this->db->transCommit();
-            return true;
-
-        } catch (\Exception $e) {
-            log_message('critical', '[DB ERROR - COMPANY UPSERT EXCEPTION] ' . $e->getMessage());
-            $this->db->transRollback();
-            return false;
+            return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
+        } catch (\Throwable $e) {
+            log_message('critical', '[Get Company Data By ID] Error: ' . $e->getMessage());
+            throw $e;
         }
     }
 
-    public function getCompanyDataByID($user_id) {
-        $sql_query = 'SELECT companies.user_id,
-                             users.username,
-                             users.name,
-                             users.email,
-                             users.phone,
-                             users.account_role,
-                             companies.business,
-                             companies.street,
-                             companies.number,
-                             companies.city,
-                             companies.state
-                      FROM companies
-                      INNER JOIN users ON companies.user_id = users.user_id
-                      WHERE users.user_id = :user_id:
-                      AND users.account_role = \'company\'';
 
-        return $this->query($sql_query, ['user_id' => $user_id])->getRowArray();
+    #|******************************|
+    #|* Insert Company             *|
+    #|******************************|
+    public function insertCompany($data, $db = null) {
+        try {
+            $db = $db ?? $this->db;
+            $builder = $db->table($this->table);
+            $builder->insert($data);
+
+            $insertId = $db->insertID();
+
+            if ($insertId !== null && $insertId !== '' && $insertId !== 0) {
+                return $insertId;
+            }
+
+        } catch (\Exception $e) {
+            log_message('critical', "[Insert Company] Error: " . $e->getMessage());
+            throw $e;
+        }
     }
 
-    public function insertCompany($data)
-    {
-        return $this->companyUpsert($data);
-    }
 
-    public function updateCompany($id, $data)
-    {
-        return $this->companyUpsert($data, $id);
-    }
+    #|******************************|
+    #|* Update Company             *|
+    #|******************************|
+    public function updateCompany($userID, $data, $db = null) {
+        try {
+            if (empty($userID)) throw new Exception("Empty User ID.");
 
+            $db = $db ?? $this->db;
+
+            $builder = $db->table($this->table)
+                          ->where('user_id', $userID)
+                          ->update($data);
+
+            return true;
+            
+        } catch (\Exception $e) {
+            log_message('critical', "[Update Company] Error: " . $e->getMessage());
+            throw $e;
+        }
+    }
 }

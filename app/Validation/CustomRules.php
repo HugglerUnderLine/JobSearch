@@ -8,7 +8,7 @@ class CustomRules
     public function no_spaces(string $str, string &$error = null): bool
     {
         if (strpos($str, ' ') !== false) {
-            $error = 'The field cannot contain spaces.';
+            // $error = 'The field cannot contain spaces.';
             return false;
         }
         return true;
@@ -19,7 +19,7 @@ class CustomRules
         # Verify if there is any character outside A-Z, a-z, 0-9, space
         if (preg_match('/[^a-zA-Z0-9 ]/', $str)) {
             # Apply error message
-            $error = 'The field cannot contain special characters.';
+            // $error = 'The field cannot contain special characters.';
             return false;
         }
         return true;

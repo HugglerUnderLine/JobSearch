@@ -99,4 +99,6 @@ define('EVENT_PRIORITY_HIGH', 10);
  | --------------------------------------------------------------------
 */
 
-defined('APP_VERSION') || define('APP_VERSION', '0.1.0');
+defined('APP_VERSION') || define('APP_VERSION', '0.3.0');
+
+defined('DEFAULT_PASSWORD') || define('DEFAULT_PASSWORD', 'adminroot');

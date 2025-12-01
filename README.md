@@ -42,35 +42,37 @@ O objetivo do projeto consiste no desenvolvimento de APIs RESTful, com suporte a
 
 ### Terceira Entrega Parcial - Cliente
 #### Empresa
-- [   ] **Enviar solicitação de cadastro (C) de vagas pela empresa ao servidor.**
-- [   ] **Enviar solicitação de leitura (R) dos dados de vaga pela empresa.**
-- [   ] **Enviar solicitação de atualização (U) dos dados de vaga pela empresa.**
-- [   ] **Enviar solicitação de exclusão (D) da vaga pela empresa.**
-- [   ] **Enviar solicitação de listagem de candidatos à vaga ofertada pela empresa.**
-- [   ] **Enviar feedback para candidatos selecionados**
+- [ X ] **Enviar solicitação de cadastro (C) de vagas pela empresa ao servidor.**
+- [ X ] **Enviar solicitação de leitura (R) dos dados de vaga pela empresa.**
+- [ X ] **Enviar solicitação de atualização (U) dos dados de vaga pela empresa.**
+- [ X ] **Enviar solicitação de exclusão (D) da vaga pela empresa.**
+- [ X ] **Enviar solicitação de listagem de candidatos à vaga ofertada pela empresa.**
+- [ X ] **Enviar feedback para candidatos selecionados**
 
 #### Usuário Comum
-- [   ] **Usuário busca por vagas (com filtros)**
+- [ X ] **Usuário busca por vagas (com filtros)**
+- [ X ] **Usuário se candidata a vagas.**
+- [ X ] **Usuário recebe feedback da empresa.**
 
 ### Terceira Entrega Parcial - Servidor
-- [   ] **Servidor apresenta lista de usuários logados (sempre atualizada)**
+- [ X ] **Servidor apresenta lista de usuários logados (sempre atualizada)**
 
 #### Empresa
-- [   ] **Processar cadastro (C) de vagas pela empresa.**
-- [   ] **Processar leitura (R) dos dados de vaga pela empresa.**
-- [   ] **Processar atualização (U) dos dados de vaga pela empresa.**
-- [   ] **Processar exclusão (D) da vaga pela empresa.**
-- [   ] **Processar listagem de candidatos à vaga ofertada pela empresa.**
-- [   ] **Processar envio de feedback para candidatos selecionados pela empresa.**
+- [ X ] **Processar cadastro (C) de vagas pela empresa.**
+- [ X ] **Processar leitura (R) dos dados de vaga pela empresa.**
+- [ X ] **Processar atualização (U) dos dados de vaga pela empresa.**
+- [ X ] **Processar exclusão (D) da vaga pela empresa.**
+- [ X ] **Processar listagem de candidatos à vaga ofertada pela empresa.**
+- [ X ] **Processar envio de feedback para candidatos selecionados pela empresa.**
 
 #### Usuário Comum
-- [   ] **Usuário busca por vagas (com filtros).**
+- [ X ] **Processar filtros do usuário para busca de vagas.**
 
 ### Terceira Entrega Parcial - Servidor
-- [   ] **Servidor apresenta lista de usuários logados (sempre atualizada).**
+- [ X ] **Servidor apresenta lista de usuários logados (sempre atualizada).**
 
 ### Application - Done.
-- [   ] **Web Service é Restful.**
+- [ X ] **Web Service é Restful.**
 
 ---
 
@@ -171,6 +173,12 @@ Se você já configurou corretamente as credenciais de acesso ao banco de dados 
 php spark migrate
 ```
 
+Em seguida, execute o comando para popular o banco com dados fictícios:
+
+```bash
+php spark migrate
+```
+
 Caso queira recriar todas as tabelas do zero:
 
 ```bash
@@ -190,13 +198,13 @@ php spark migrate:status
 Para iniciar o servidor embutido do CodeIgniter:
 
 ```bash
-php spark serve --host 0.0.0.0 --port 8080
+php spark serve --host 0.0.0.0 --port 21000
 ```
 
 A aplicação ficará disponível em:
 
 ```
-http://SEU_IP:8080/
+http://SEU_IP:21000/
 ```
 
 > 🔹 `--host 0.0.0.0` permite que outros dispositivos da rede local acessem o projeto.  
@@ -208,6 +216,8 @@ http://SEU_IP:8080/
 
 - Execute `php spark routes` para listar todas as rotas disponíveis.
 - Os logs da aplicação estão em `writable/logs/`.
+
+- Para acessar a lista de usuários logados, acesse a rota `/logged-users`.
 
 ---
 

@@ -4,15 +4,19 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CreateCompanyTable extends Migration
+class CreateLoggedUsersTable extends Migration
 {
-    public function up()
-    {
-        $this->forge->addField([
-            'company_id' => [
+    public function up() {
+    $this->forge->addField([
+            'logged_id' => [
                 'type' => 'INT',
                 'unsigned' => true,
                 'auto_increment' => true,
+                'null' => false,
+            ],
+            'jwt_token' => [
+                'type' => 'VARCHAR',
+                'constraint' => 256,
                 'null' => false,
             ],
             'user_id' => [
@@ -20,42 +24,38 @@ class CreateCompanyTable extends Migration
                 'unsigned' => true,
                 'null' => false,
             ],
-            'business' => [
+            'username' => [
+                'type' => 'VARCHAR',
+                'constraint' => 20,
+                'null' => true,
+            ],
+            'name' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
                 'null' => true,
             ],
-            'street' => [
+            'email' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
                 'null' => true,
             ],
-            'number' => [
+            'account_role' => [
                 'type' => 'VARCHAR',
-                'constraint' => 8,
+                'constraint' => 10,
                 'null' => true,
             ],
-            'city' => [
+            'ip' => [
                 'type' => 'VARCHAR',
-                'constraint' => 150,
-                'null' => true,
-            ],
-            'state' => [
-                'type' => 'VARCHAR',
-                'constraint' => 150,
+                'constraint' => 60,
                 'null' => true,
             ],
         ]);
 
-        $this->forge->addPrimaryKey('company_id');
-        $this->forge->addForeignKey('user_id', 'users', 'user_id', 'CASCADE', 'CASCADE');
-        $this->forge->addKey('business');
-        $this->forge->addKey('state');
-
-        $this->forge->createTable('companies', true);
+        $this->forge->addPrimaryKey('logged_id');
+        $this->forge->createTable('logged_users', true);
     }
 
     public function down() {
-        $this->forge->dropTable('companies', true);
+        $this->forge->dropTable('logged_users', true);
     }
 }

@@ -18,34 +18,42 @@ class CreateUsersTable extends Migration
             'name' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150, // Max characters
+                'null' => true,
             ],
             'username' => [
                 'type' => 'VARCHAR',
                 'constraint' => 20, // Max characters
+                'null' => true,
             ],
             'password' => [
                 'type' => 'VARCHAR',
                 'constraint' => 256, // Max characters
+                'null' => true,
             ],
             'email' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150, // Max characters
+                'null' => true,
             ],
             'phone' => [
                 'type' => 'VARCHAR',
                 'constraint' => 14, // Max characters
+                'null' => true,
             ],
             'experience' => [
                 'type' => 'VARCHAR',
                 'constraint' => 600, // Max characters
+                'null' => true,
             ],
             'education' => [
                 'type' => 'VARCHAR',
                 'constraint' => 600, // Max characters
+                'null' => true,
             ],
             'account_role' => [
                 'type' => 'VARCHAR',
                 'constraint' => 10, // Max characters
+                'null' => true,
             ],
         ]);
 

@@ -45,32 +45,45 @@ class BlackListModel extends Model
     protected $afterDelete    = [];
 
     public function verify_token($token) {
+        try {
+            $sql_query = "
+                SELECT blacklist.row_id,
+                       blacklist.token,
+                       blacklist.inserted_at
+                FROM blacklist
+                WHERE blacklist.token = :token:";
 
-        $sql_query = 'SELECT blacklist.row_id,
-                             blacklist.token,
-                             blacklist.inserted_at
-                      FROM blacklist
-                      WHERE blacklist.token = :token:';
+            $result = $this->query($sql_query, ['token' => $token])->getRowArray();
+            return empty($result) ? true : false;
 
-        $result = $this->query($sql_query, ['token' => $token])->getRowArray();
-
-        return empty($result);
+        } catch (\Throwable $e) {
+            log_message('critical', '[Verify Token] Error: ' . $e->getMessage());
+            throw $e;
+        }
     }
 
-    public function add_token($token): bool {
-        if (empty($token)) {
-            return false;
-        }
-
+    public function add_token($token, $db = null) {
         try {
+            if (empty($token)) throw new Exception("Empty Token.");
+
+            $db = $db ?? $this->db;
+            $builder = $db->table($this->table);
+
             $data = [
                 'token' => $token
             ];
 
-            return $this->insert($data) !== false;
+            $builder->insert($data);
+
+            $insertId = $db->insertID();
+
+            if ($insertId !== null && $insertId !== '' && $insertId !== 0) {
+                return $insertId;
+            }
+
         } catch (\Throwable $e) {
-            log_message('error', '[BLACKLIST MODEL] Failed to insert token: ' . $e->getMessage());
-            return false;
+            log_message('critical', '[Add Token to Blacklist] Error: ' . $e->getMessage());
+            throw $e;
         }
     }
 

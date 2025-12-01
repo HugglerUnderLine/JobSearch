@@ -4,12 +4,12 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class CreateJobOpeningsTable extends Migration
+class CreateJobsTable extends Migration
 {
     public function up()
     {
         $this->forge->addField([
-            'job_opening_id' => [
+            'job_id' => [
                 'type' => 'INT',
                 'unsigned' => true,
                 'auto_increment' => true,
@@ -26,33 +26,39 @@ class CreateJobOpeningsTable extends Migration
             ],
             'area' => [
                 'type' => 'VARCHAR',
-                'constraint' => 150,
+                'constraint' => 100,
             ],
             'description' => [
-                'type' => 'VARCHAR',
-                'constraint' => 4000,
+                'type' => 'TEXT',
             ],
-            'location' => [
+            'state' => [
+                'type' => 'VARCHAR',
+                'constraint' => 150,
+            ],
+            'city' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
             ],
             'salary' => [
-                'type' => 'NUMERIC',
+                'type'       => 'NUMERIC',
+                'constraint' => '10,2',
+                'null' => true,
             ],
         ]);
 
-        $this->forge->addPrimaryKey('job_opening_id');
-        $this->forge->addForeignKey('company_id', 'companies', 'company_id', 'CASCADE', 'RESTRICT');
+        $this->forge->addPrimaryKey('job_id');
+        $this->forge->addForeignKey('company_id', 'companies', 'company_id', 'CASCADE', 'CASCADE');
         $this->forge->addKey('title');
         $this->forge->addKey('area');
         $this->forge->addKey('description');
-        $this->forge->addKey('location');
+        $this->forge->addKey('state');
+        $this->forge->addKey('city');
         $this->forge->addKey('salary');
 
-        $this->forge->createTable('job_openings', true);
+        $this->forge->createTable('jobs', true);
     }
 
     public function down() {
-        $this->forge->dropTable('job_openings', true);
+        $this->forge->dropTable('jobs', true);
     }
 }

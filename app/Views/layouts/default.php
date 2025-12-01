@@ -201,12 +201,6 @@
                     <li class="nav-item">
                         <a class="nav-link nav-hover" aria-current="page" href="<?= base_url('about') ?>">About</a>
                     </li>
-                    <!-- <li class="nav-item">
-                        <a class="nav-link nav-hover" href="#">Jobs</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link nav-hover" href="#"></a>
-                    </li> -->
                 </ul>
 
                 <div class="d-flex align-items-center me-5 ms-5">
@@ -273,6 +267,8 @@
 <script src="<?= base_url('assets/bootstrap-5.3.3-dist/js/bootstrap.bundle.min.js') ?>"></script>
 <script src="<?= base_url('assets/jQuery-3.7.0/jquery-3.7.0.min.js') ?>"></script>
 <script>
+    // Just in case that someone did not implemented the fallback
+    var isFallbackEnabled = true;
 
     // Intercept both requests and responses
     $(document).ajaxSend(function(event, jqXHR, settings) {
@@ -283,7 +279,6 @@
         console.log('📋 Headers:', jqXHR.requestHeaders || '(not yet available)');
         console.groupEnd();
     });
-
 
     // Capture responses as well
     $(document).ajaxComplete(function(event, xhr, settings) {
@@ -297,7 +292,6 @@
         }
         console.groupEnd();
     });
-
 
     // Intercept headers before sending (works with override)
     (function($) {
@@ -316,6 +310,97 @@
         };
     })(jQuery);
 
+    function verifyReceivedJSON(expected, received) {
+        let errors = [];
+        expected.forEach((field, index) => {
+            const value = received[field.name];
+
+            // Empty checks
+            const isEmpty = (value === undefined || value === null || value === '');
+
+            if (isEmpty && !field.allowEmpty) {
+                errors.push(`Field[${index}] → Missing field '${field.name}'`);
+                return;
+            }
+
+            // allowEmpty = true → skip type check
+            if (isEmpty && field.allowEmpty) {
+                return;
+            }
+
+            // Detect type
+            let receivedType;
+            if (Array.isArray(value)) {
+                receivedType = "array";
+            } else {
+                receivedType = typeof value;
+            }
+
+            // Normalize expected types
+            const jsExpected =
+                field.type === "int" || field.type === "float" ? "number" : field.type;
+
+            if (field.type && receivedType !== jsExpected) {
+                errors.push(
+                    `Field[${index}] → '${field.name}' has invalid type. Expected: ${jsExpected}, Received: ${receivedType}`
+                );
+            }
+        });
+
+        // Global error handling
+        if (errors.length > 0) {
+            reportClientError(errors.join(" | "));
+        }
+    }
+
+
+
+    function verifyArrayOfObjects(expectedFields, itemsArray) {
+        let errors = [];
+
+        if (!Array.isArray(itemsArray)) {
+            reportClientError("Items is not a valid array.");
+            return;
+        }
+
+        itemsArray.forEach((item, index) => {
+
+            expectedFields.forEach(field => {
+                const value = item[field.name];
+
+                const isEmpty = (value === undefined || value === null || value === "");
+
+                if (isEmpty && !field.allowEmpty) {
+                    errors.push(`Item[${index}] → Missing field '${field.name}'`);
+                    return;
+                }
+
+                if (isEmpty && field.allowEmpty) {
+                    return;
+                }
+
+                let receivedType;
+                if (Array.isArray(value)) {
+                    receivedType = "array";
+                } else {
+                    receivedType = typeof value;
+                }
+
+                const jsExpected =
+                    field.type === "int" || field.type === "float" ? "number" : field.type;
+
+                if (field.type && receivedType !== jsExpected) {
+                    errors.push(
+                        `Item[${index}] → '${field.name}' has invalid type. Expected: ${jsExpected}, Received: ${receivedType}`
+                    );
+                }
+            });
+        });
+
+        if (errors.length > 0) {
+            reportClientError(errors.join(" | "));
+        }
+    }
 
 
     // Ensure that the whole content are loaded before showing the current page
@@ -327,6 +412,87 @@
         }
     };
 
+    function reportClientError(message) {
+        let ltoken = localStorage.getItem('token');
+        let serverBaseUrl = localStorage.getItem('server_url');
+
+        if (!ltoken) {
+            showMessage("warning", "Unable to send error message to server. Token not found in localStorage.");
+            return;
+        }
+
+        function copyToClipboard(text) {
+            // Modern API
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .catch(err => console.warn("Clipboard API failed, fallback used.", err));
+            } 
+            
+            // Fallback for any browser
+            else {
+                const textarea = document.createElement("textarea");
+                textarea.value = text;
+                textarea.style.position = "fixed";
+                textarea.style.opacity = "0";
+                textarea.style.left = "-9999px";
+                document.body.appendChild(textarea);
+
+                textarea.select();
+                try {
+                    document.execCommand("copy");
+                } catch (e) {
+                    console.warn("Fallback clipboard copy failed.", e);
+                }
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // Always copy BEFORE anything else happens
+        copyToClipboard(message);
+
+        if (!serverBaseUrl) {
+            console.warn("Cannot report error: serverBaseUrl is empty.");
+            return;
+        }
+
+        if (!ltoken) {
+            console.warn("Cannot report error: token is empty.");
+            return;
+        }
+
+        if (!isFallbackEnabled) {
+            showMessage("warning", "Fallback disabled. The errors were copied to the clipboard.");
+            return;
+        }
+
+        const headers = { 
+            "Accept": "application/json", 
+            "Authorization": "Bearer " + ltoken 
+        };
+
+        $.ajax({
+            url: serverBaseUrl + "/error",
+            method: "POST",
+            contentType: "application/json; charset=UTF-8",
+            data: JSON.stringify({ message }),
+            headers: headers,
+            dataType: "json",
+            timeout: 3000, // If server doesn't reply in 3s, abort connection
+            success: function (xhr, status) {
+                console.warn("The server was notified about invalid data.");
+                showMessage("warning", "The server was notified about invalid data.")
+            },
+            error: function (xhr, status) {
+                if (status === "timeout") {
+                    console.warn("Server received the error, but didn't replied.");
+                    showMessage("warning", "Server received the error, but didn't replied.")
+                } else {
+                    console.warn("Notification could not be sent.");
+                    showMessage("warning", "Notification could not be sent.")
+                }
+            }
+        });
+    }
 
     function decodeJWT(token) {
         if (!token) return null;
@@ -345,7 +511,6 @@
         }
     }
 
-
     // Show alert Messages
     var alertTimeout; // Global var for timer control
     function showMessage(type, message) {
@@ -358,17 +523,24 @@
         clearTimeout(alertTimeout);
 
         // Reset classes
-        alertElement.removeClass('alert-success alert-danger');
+        alertElement.removeClass('alert-success alert-danger alert-warning alert-info');
 
         // Message Content
-        alertTitleElement.text(type === 'success' ? 'Success: ' : 'Error: ');
         messageAlertElement.html(message);
 
         // Visual Class
         if (type === 'success') {
+            alertTitleElement.text('Success: ');
             alertElement.addClass('alert-success');
-        } else {
+        } else if (type === 'error') {
+            alertTitleElement.text('Error: ');
             alertElement.addClass('alert-danger');
+        } else if (type === 'warning') {
+            alertTitleElement.text('Warning: ');
+            alertElement.addClass('alert-warning');
+        } else {
+            alertTitleElement.text('Info: ');
+            alertElement.addClass('alert-info');
         }
 
         // Show the alert
@@ -380,27 +552,50 @@
         }, 10000);
     }
 
-
     // Close button
     $('#close-alert').on('click', function() {
         $('#dynamic-alert').slideUp(300);
     });
 
-
     document.addEventListener('DOMContentLoaded', function() {
-        // Get username from localStorage
         const username = localStorage.getItem('username') || 'User';
-
-        // Get the <b> element
         const usernameElement = document.getElementById('username');
-
-        // Set the username text
         usernameElement.textContent = username;
+        const role = localStorage.getItem("role");
+        const menuList = document.querySelector("#navbarText .navbar-nav");
+        if (!menuList) {
+            console.error("Menu list not found.");
+            return;
+        }
+        
+        function createMenuItem(text, route) {
+            const li = document.createElement("li");
+            li.classList.add("nav-item");
+
+            const a = document.createElement("a");
+            a.classList.add("nav-link", "nav-hover");
+            a.href = route;
+            a.textContent = text;
+
+            li.appendChild(a);
+            return li;
+        }
+
+        if (role === "company") {
+            menuList.appendChild(createMenuItem("Jobs", "/company/jobs"));
+            return;
+        }
+
+        if (role === "user") {
+            menuList.appendChild(createMenuItem("Jobs", "/user/jobs"));
+            menuList.appendChild(createMenuItem("Applications", "/user/applications"));
+            return;
+        }
+
+        console.warn("Invalid or missing role in localStorage.");
     });
 
-
     $(document).ready(function() {
-
         // Display username from localStorage
         const username = localStorage.getItem('username') || 'Unknown User';
         const role = localStorage.getItem('role');
@@ -430,22 +625,21 @@
                     'Accept': 'application/json'
                 },
                 dataType: 'json',
-                success: function(response) {
-                    showMessage('success', response.message || 'Logout successful.');
-                    // Clear localStorage
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('username');
+                success: function(response, textStatus, xhr) {
+                    const status = xhr.status;
+                    const message = response.message || "Operation successful.";
+                    showMessage('success', `(${status}) ` + response.message || 'Logout successful.');
                     // Redirect to login
                     setTimeout(() => window.location.href = "<?= base_url('login') ?>", 1000);
                 },
                 error: function(xhr) {
+                    const status = xhr.status;
                     const response = xhr.responseJSON || {};
-                    showMessage('error', response.message || 'Logout error.');
+                    showMessage('error', `(${status}) ` + response.message || 'Logout error.');
                     setLoadingButton($button, false);
                 }
             });
         });
-
 
         function setLoadingButton($button, isLoading) {
             if (isLoading) {
@@ -460,7 +654,6 @@
             }
         }
     });
-
 
     // Open delete account modal
     $('.dropdown-item:contains("Delete my account")').on('click', function(e) {
@@ -496,24 +689,20 @@
             url: serverUrl + endpoint,
             method: 'DELETE',
             headers: headers,
-            complete: function(xhr) {
+            success: function(response, textStatus, xhr) {
                 const status = xhr.status;
-                const response = xhr.responseJSON || {};
-                const message = response.message || "No message returned.";
-
-                if (status === 200) {
-                    showMessage("success", `(${status}) ${message || 'Account deleted successfully.'}`);
-                } else {
-                    showMessage("error", `(${status}) ${message || "Error on account delete."}`);
-                }
+                const message = response.message || "Operation successful.";
+                showMessage('success', `(${status}) ` + response.message || 'Logout successful.');
+                // Redirect to login
+                setTimeout(() => window.location.href = "<?= base_url('login') ?>", 1000);
             },
             error: function(xhr) {
-                const msg = xhr.responseJSON?.message || "Error on account delete.";
-                showMessage('error', msg);
+                const response = xhr.responseJSON || {};
+                showMessage('error', `(${status}) ` + response.message || 'Logout error.');
+                setLoadingButton($button, false);
             }
         });
     }
-
 
     // Bootstrap Tooltips
     $(document).ready(function () {
@@ -522,7 +711,6 @@
             new bootstrap.Tooltip(t)
         })
     });
-
 
     // Aux functions to hide / show the loading overlay
     /*
@@ -579,7 +767,6 @@
             }
         });
 
-
         $(document).on('show.bs.modal', '.modal', function (e) {
             // If there is an running hide(), we prevent the show() and put the new request in queue
             if (modalIsHiding) {
@@ -597,7 +784,6 @@
                 });
             }
         });
-
 
         // Expose the global functions according to his actual usage
         window.showLoading = function (message) {
@@ -621,7 +807,6 @@
             _doShowLoading(message);
         };
 
-
         window.hideLoading = function () {
             // Cancel pending request (if any)
             loadingPending = false;
@@ -631,11 +816,7 @@
                 overlayVisible = false;
             });
         };
-
-
     })(jQuery);
-
-    
 </script>
 
 <?= $this->renderSection('more-scripts') ?>

@@ -19,6 +19,7 @@ class CreateBlackListTable extends Migration
             'token' => [
                 'type' => 'VARCHAR',
                 'constraint' => 500,
+                'null' => true,
             ],
             'inserted_at' => [
                 'type' => 'TIMESTAMP',

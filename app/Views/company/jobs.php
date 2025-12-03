@@ -49,10 +49,6 @@
                             <?php endforeach ?>
                         </select>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Job Description</label>
-                        <input type="text" class="form-control shadow-sm" id="jobDescriptionFilter" name="jobDescriptionFilter" maxlength="5000">
-                    </div>
                     <div class="row">
                         <div class="col-12 col-md-6 mb-3">
                             <label class="form-label fw-semibold">City</label>
@@ -422,9 +418,6 @@
                             </button>
                             <button class="btn btn-sm btn-outline-success" onclick="getCandidates(${sub}, ${job.job_id})">
                                 <span class="material-symbols-rounded align-bottom">patient_list</span> Candidates
-                            </button>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editJob(${job.job_id})">
-                                <span class="material-symbols-rounded align-bottom">edit</span> Edit
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteJob(${job.job_id})">
                                 <span class="material-symbols-rounded align-bottom">delete</span> Delete

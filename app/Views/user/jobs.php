@@ -360,6 +360,10 @@
         }
 
         function loadUserProfile() {
+            if ($('#job_modal').hasClass('show')) {
+                $('#job_modal').modal('hide');
+            }
+
             $.ajax({
                 url: serverUrl + `/users/${sub}`,
                 method: 'GET',
@@ -372,7 +376,6 @@
                     $('#phone').val(response.phone);
                     $('#experience').val(response.experience);
                     $('#education').val(response.education);
-                    $('#profile_modal').modal('show');
                 },
                 error: function(xhr) {
                     const status = xhr.status;
@@ -381,6 +384,7 @@
                     showMessage('error', `(${status}) ${msg}`);
                 }
             });
+            $('#profile_modal').modal('show');
         } window.loadUserProfile = loadUserProfile;
 
         function getProfileData() {
@@ -443,13 +447,8 @@
                 return;
             }
 
-            // Preenche o hidden input
             $("#jobId").val(jobId);
 
-            // Carrega informações da vaga
-            readJobDetails(jobId);
-
-            // Após carregar a vaga, abre o modal de perfil
             loadUserProfile();
         }
         window.prepareJobApplication = prepareJobApplication;

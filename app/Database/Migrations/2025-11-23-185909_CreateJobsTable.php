@@ -23,21 +23,26 @@ class CreateJobsTable extends Migration
             'title' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
+                'null' => true,
             ],
             'area' => [
                 'type' => 'VARCHAR',
                 'constraint' => 100,
+                'null' => true,
             ],
             'description' => [
                 'type' => 'TEXT',
+                'null' => true,
             ],
             'state' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
+                'null' => true,
             ],
             'city' => [
                 'type' => 'VARCHAR',
                 'constraint' => 150,
+                'null' => true,
             ],
             'salary' => [
                 'type'       => 'NUMERIC',
